@@ -1,0 +1,663 @@
+import { useState, useEffect, useRef } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  CreditCard,
+  CheckCircle2,
+  ChefHat,
+  PackageCheck,
+  XCircle,
+  AlertCircle,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Spinner } from '@/components/ui/spinner'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import api from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
+import { formatCurrency, formatDate } from '@/lib/utils'
+
+const ORDER_TIMELINE = [
+  { status: 'placed', label: 'Order Placed', icon: Clock },
+  { status: 'accepted', label: 'Accepted', icon: CheckCircle2 },
+  { status: 'processing', label: 'Preparing', icon: ChefHat },
+  { status: 'ready', label: 'Ready for Pickup', icon: PackageCheck },
+  { status: 'picked_up', label: 'Picked Up', icon: CheckCircle2 },
+]
+
+const STATUS_ORDER = ['placed', 'accepted', 'processing', 'ready', 'picked_up']
+
+export default function OrderDetailPage() {
+  const { id } = useParams()
+  const { user } = useAuth()
+
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  // Payment dialog
+  const [paymentDialog, setPaymentDialog] = useState(false)
+  const [transactionId, setTransactionId] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
+
+  // OTP dialog
+  const [otpDialog, setOtpDialog] = useState(false)
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
+  const [otpLoading, setOtpLoading] = useState(false)
+  const otpRefs = useRef([])
+
+  const fetchOrder = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const res = await api.get(`/orders/${id}`)
+      setOrder(res.data.data.order || res.data.data)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load order details.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (id) fetchOrder()
+  }, [id])
+
+  // Status update
+  const handleStatusUpdate = async (newStatus) => {
+    setActionLoading(true)
+    try {
+      await api.patch(`/orders/${id}/status`, { status: newStatus })
+      toast.success(`Order status updated to ${newStatus}.`)
+      await fetchOrder()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update status.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Payment confirmation
+  const handlePaymentConfirm = async (status) => {
+    setPaymentLoading(true)
+    try {
+      await api.patch(`/orders/${id}/payment-status`, {
+        paymentStatus: status,
+        transactionId: transactionId || undefined,
+      })
+      toast.success(
+        status === 'success' ? 'Payment confirmed.' : 'Payment marked as failed.'
+      )
+      setPaymentDialog(false)
+      setTransactionId('')
+      await fetchOrder()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update payment.')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  // OTP handling
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) value = value.slice(-1)
+    if (value && !/^\d$/.test(value)) return
+
+    const newDigits = [...otpDigits]
+    newDigits[index] = value
+    setOtpDigits(newDigits)
+
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (pasted.length > 0) {
+      const newDigits = [...otpDigits]
+      for (let i = 0; i < 6; i++) {
+        newDigits[i] = pasted[i] || ''
+      }
+      setOtpDigits(newDigits)
+      const focusIdx = Math.min(pasted.length, 5)
+      otpRefs.current[focusIdx]?.focus()
+    }
+  }
+
+  const handleOtpVerify = async () => {
+    const otp = otpDigits.join('')
+    if (otp.length !== 6) {
+      toast.error('Please enter all 6 digits.')
+      return
+    }
+
+    setOtpLoading(true)
+    try {
+      await api.post(`/orders/${id}/verify-otp`, { otp })
+      toast.success('OTP verified! Order completed.')
+      setOtpDialog(false)
+      setOtpDigits(['', '', '', '', '', ''])
+      await fetchOrder()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'OTP verification failed.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  // Timeline step state
+  const getStepState = (stepStatus) => {
+    if (!order) return 'upcoming'
+    if (order.status === 'cancelled') {
+      return stepStatus === 'placed' ? 'completed' : 'upcoming'
+    }
+    const currentIdx = STATUS_ORDER.indexOf(order.status)
+    const stepIdx = STATUS_ORDER.indexOf(stepStatus)
+    if (stepIdx < currentIdx) return 'completed'
+    if (stepIdx === currentIdx) return 'current'
+    return 'upcoming'
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner size="lg" />
+          <p className="text-muted-foreground text-sm">Loading order...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !order) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full">
+          <CardContent className="flex flex-col items-center gap-4 p-8">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <p className="text-center text-muted-foreground">
+              {error || 'Order not found.'}
+            </p>
+            <Button asChild>
+              <Link to="/store/orders">Back to Orders</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const items = order.items || []
+  const isPaid = order.payment_status === 'success'
+  const isTerminal = order.status === 'picked_up' || order.status === 'cancelled'
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/store/orders">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Order #{order.order_number || order.id?.slice(0, 8)}
+            </h1>
+            <StatusBadge status={order.status} />
+          </div>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            {formatDate(order.created_at)}
+          </p>
+        </div>
+      </div>
+
+      {/* Order Timeline */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Order Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between relative">
+            {/* Progress bar background */}
+            <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted" />
+            {/* Progress bar fill */}
+            {(() => {
+              const currentIdx = STATUS_ORDER.indexOf(order.status)
+              const widthPercent =
+                order.status === 'cancelled'
+                  ? 0
+                  : (currentIdx / (STATUS_ORDER.length - 1)) * 100
+              return (
+                <div
+                  className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500"
+                  style={{ width: `${widthPercent}%` }}
+                />
+              )
+            })()}
+
+            {ORDER_TIMELINE.map((step) => {
+              const state = getStepState(step.status)
+              const Icon = step.icon
+              return (
+                <div
+                  key={step.status}
+                  className="relative flex flex-col items-center z-10"
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                      state === 'completed'
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : state === 'current'
+                        ? 'bg-primary/10 border-primary text-primary'
+                        : 'bg-background border-muted-foreground/30 text-muted-foreground/50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span
+                    className={`text-[10px] sm:text-xs mt-1.5 text-center max-w-[60px] sm:max-w-none ${
+                      state === 'upcoming'
+                        ? 'text-muted-foreground/50'
+                        : 'text-foreground font-medium'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {order.status === 'cancelled' && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-center">
+              <p className="text-sm font-medium text-red-800">
+                This order has been cancelled.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* OTP Display when ready */}
+      {order.status === 'ready' && order.pickup_otp && (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardContent className="py-6 text-center">
+            <p className="text-sm font-medium text-green-800 mb-2">
+              Pickup OTP - Verify with customer
+            </p>
+            <p className="text-4xl font-mono font-bold tracking-[0.4em] text-green-700">
+              {order.pickup_otp}
+            </p>
+            <p className="text-xs text-green-600 mt-2">
+              The customer must present this OTP to collect their order.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Customer Details */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Customer Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                {order.customer_name || order.user_name || 'N/A'}
+              </span>
+            </div>
+            {(order.customer_email || order.user_email) && (
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {order.customer_email || order.user_email}
+                </span>
+              </div>
+            )}
+            {(order.customer_phone || order.user_phone) && (
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {order.customer_phone || order.user_phone}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment Info */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Payment Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <StatusBadge status={order.payment_status} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Method</span>
+              <span className="text-sm font-medium capitalize">
+                {order.payment_method || 'UPI'}
+              </span>
+            </div>
+            {order.transaction_id && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Transaction ID</span>
+                <span className="text-sm font-mono">{order.transaction_id}</span>
+              </div>
+            )}
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Total</span>
+              <span className="text-lg font-bold">
+                {formatCurrency(order.total_amount || 0)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Order Items */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Order Items</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No items information available.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item, idx) => (
+                <div key={idx}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                        {item.quantity}x
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {item.name || item.menu_item_name}
+                        </p>
+                        {item.special_instructions && (
+                          <p className="text-xs text-muted-foreground">
+                            Note: {item.special_instructions}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(
+                        (item.price_at_order || item.price) * item.quantity
+                      )}
+                    </span>
+                  </div>
+                  {idx < items.length - 1 && <Separator className="mt-3" />}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Special Instructions */}
+      {order.special_instructions && (
+        <Card className="border-yellow-200 bg-yellow-50/50">
+          <CardContent className="py-4">
+            <p className="text-xs font-medium text-yellow-800 mb-1">
+              Special Instructions
+            </p>
+            <p className="text-sm text-yellow-700">{order.special_instructions}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      {!isTerminal && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex flex-wrap gap-3 justify-end">
+              {order.payment_status === 'pending' && (
+                <Button
+                  variant="warning"
+                  onClick={() => setPaymentDialog(true)}
+                  disabled={actionLoading}
+                  className="gap-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Confirm Payment
+                </Button>
+              )}
+
+              {order.status === 'placed' && isPaid && (
+                <Button
+                  onClick={() => handleStatusUpdate('accepted')}
+                  disabled={actionLoading}
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Accept Order
+                </Button>
+              )}
+
+              {order.status === 'accepted' && (
+                <Button
+                  onClick={() => handleStatusUpdate('processing')}
+                  disabled={actionLoading}
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <ChefHat className="h-4 w-4" />
+                  )}
+                  Start Preparing
+                </Button>
+              )}
+
+              {order.status === 'processing' && (
+                <Button
+                  variant="success"
+                  onClick={() => handleStatusUpdate('ready')}
+                  disabled={actionLoading}
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <PackageCheck className="h-4 w-4" />
+                  )}
+                  Mark Ready
+                </Button>
+              )}
+
+              {order.status === 'ready' && (
+                <Button
+                  variant="success"
+                  onClick={() => {
+                    setOtpDigits(['', '', '', '', '', ''])
+                    setOtpDialog(true)
+                  }}
+                  disabled={actionLoading}
+                  className="gap-2"
+                >
+                  {actionLoading ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Verify OTP & Complete
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payment Dialog */}
+      <Dialog
+        open={paymentDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPaymentDialog(false)
+            setTransactionId('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogDescription>
+              Order #{order.order_number || order.id?.slice(0, 8)} -{' '}
+              {formatCurrency(order.total_amount || 0)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm">Has the customer completed the UPI payment?</p>
+            <div className="space-y-2">
+              <Label htmlFor="detail-txn-id">Transaction ID (optional)</Label>
+              <Input
+                id="detail-txn-id"
+                placeholder="Enter UPI transaction ID"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => handlePaymentConfirm('failed')}
+              disabled={paymentLoading}
+              className="gap-1.5"
+            >
+              {paymentLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              Mark Failed
+            </Button>
+            <Button
+              onClick={() => handlePaymentConfirm('success')}
+              disabled={paymentLoading}
+              className="gap-1.5"
+            >
+              {paymentLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              Confirm Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* OTP Dialog */}
+      <Dialog
+        open={otpDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOtpDialog(false)
+            setOtpDigits(['', '', '', '', '', ''])
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify Pickup OTP</DialogTitle>
+            <DialogDescription>
+              Ask the customer for their 6-digit pickup code.
+            </DialogDescription>
+          </DialogHeader>
+
+          {order.pickup_otp && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+              <p className="text-xs font-medium text-blue-800 mb-1">
+                Expected OTP (shown to customer)
+              </p>
+              <p className="text-2xl font-mono font-bold tracking-[0.3em] text-blue-700">
+                {order.pickup_otp}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4 py-2">
+            <Label>Enter Customer's OTP</Label>
+            <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
+              {otpDigits.map((digit, idx) => (
+                <Input
+                  key={idx}
+                  ref={(el) => {
+                    otpRefs.current[idx] = el
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  className="w-12 h-14 text-center text-xl font-bold"
+                  autoFocus={idx === 0}
+                />
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={handleOtpVerify}
+              disabled={otpLoading || otpDigits.join('').length !== 6}
+              className="w-full gap-2"
+            >
+              {otpLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              Verify & Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
