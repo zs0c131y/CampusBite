@@ -643,6 +643,14 @@ export const verifyOrderOtp = async (req, res, next) => {
           message: 'Invalid or expired OTP.',
         })
       }
+    } else {
+      const isStillValid = validateOtp(order.otp, order.otp, order.otp_expires_at)
+      if (!isStillValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP expired. Mark order ready again to generate a new OTP.',
+        })
+      }
     }
 
     order.is_otp_verified = true

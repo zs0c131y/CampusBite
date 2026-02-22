@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Clock,
@@ -87,8 +87,27 @@ export default function StoreOrdersPage() {
     }
   }, [loading])
 
-  // Poll every 10 seconds
-  usePolling(fetchOrders, 10000)
+  // Near real-time polling for incoming orders.
+  usePolling(fetchOrders, 3000)
+
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchOrders()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [fetchOrders])
 
   // Filter orders by active tab
   const filteredOrders =

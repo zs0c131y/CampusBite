@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -30,6 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { usePolling } from '@/hooks/usePolling'
 import api from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
@@ -58,9 +59,7 @@ export default function OrderDetailPage() {
 
   // OTP dialog
   const [otpDialog, setOtpDialog] = useState(false)
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
   const [otpLoading, setOtpLoading] = useState(false)
-  const otpRefs = useRef([])
 
   const fetchOrder = async () => {
     try {
@@ -78,6 +77,8 @@ export default function OrderDetailPage() {
   useEffect(() => {
     if (id) fetchOrder()
   }, [id])
+
+  usePolling(fetchOrder, 3000, Boolean(id))
 
   // Status update
   const handleStatusUpdate = async (newStatus) => {
@@ -114,53 +115,12 @@ export default function OrderDetailPage() {
     }
   }
 
-  // OTP handling
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) value = value.slice(-1)
-    if (value && !/^\d$/.test(value)) return
-
-    const newDigits = [...otpDigits]
-    newDigits[index] = value
-    setOtpDigits(newDigits)
-
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length > 0) {
-      const newDigits = [...otpDigits]
-      for (let i = 0; i < 6; i++) {
-        newDigits[i] = pasted[i] || ''
-      }
-      setOtpDigits(newDigits)
-      const focusIdx = Math.min(pasted.length, 5)
-      otpRefs.current[focusIdx]?.focus()
-    }
-  }
-
   const handleOtpVerify = async () => {
-    const otp = otpDigits.join('')
-    if (otp.length !== 6) {
-      toast.error('Please enter all 6 digits.')
-      return
-    }
-
     setOtpLoading(true)
     try {
-      await api.post(`/orders/${id}/verify-otp`, { otp })
-      toast.success('OTP verified! Order completed.')
+      await api.post(`/orders/${id}/verify-otp`, { manualConfirm: true })
+      toast.success('Pickup confirmed. Order completed.')
       setOtpDialog(false)
-      setOtpDigits(['', '', '', '', '', ''])
       await fetchOrder()
     } catch (err) {
       toast.error(err.response?.data?.message || 'OTP verification failed.')
@@ -573,7 +533,6 @@ export default function OrderDetailPage() {
                 <Button
                   variant="success"
                   onClick={() => {
-                    setOtpDigits(['', '', '', '', '', ''])
                     setOtpDialog(true)
                   }}
                   disabled={actionLoading}
@@ -660,7 +619,6 @@ export default function OrderDetailPage() {
         onOpenChange={(open) => {
           if (!open) {
             setOtpDialog(false)
-            setOtpDigits(['', '', '', '', '', ''])
           }
         }}
       >
@@ -683,32 +641,19 @@ export default function OrderDetailPage() {
             </div>
           )}
 
-          <div className="space-y-4 py-2">
-            <Label>Enter Customer's OTP</Label>
-            <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
-              {otpDigits.map((digit, idx) => (
-                <Input
-                  key={idx}
-                  ref={(el) => {
-                    otpRefs.current[idx] = el
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  className="w-12 h-14 text-center text-xl font-bold"
-                  autoFocus={idx === 0}
-                />
-              ))}
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Ask the student/faculty to show or say the OTP, then confirm pickup.
+            </p>
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              No typing required. This will mark the order as picked up immediately.
             </div>
           </div>
 
           <DialogFooter>
             <Button
               onClick={handleOtpVerify}
-              disabled={otpLoading || otpDigits.join('').length !== 6}
+              disabled={otpLoading}
               className="w-full gap-2"
             >
               {otpLoading ? (
@@ -716,7 +661,7 @@ export default function OrderDetailPage() {
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
-              Verify & Complete
+              Confirm OTP Checked & Complete
             </Button>
           </DialogFooter>
         </DialogContent>
