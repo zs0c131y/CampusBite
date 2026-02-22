@@ -1,5 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
+import {
+  clearAuthData,
+  getAccessToken,
+  getRefreshToken,
+  getStoredUser,
+  setAuthData,
+  setStoredUser,
+} from '@/lib/authStorage'
 
 const AuthContext = createContext(null)
 
@@ -9,19 +17,17 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('accessToken')
-      const storedUser = localStorage.getItem('user')
+      const token = getAccessToken()
+      const storedUser = getStoredUser()
       if (token && storedUser) {
         try {
           const { data } = await api.get('/users/profile')
           if (data.success) {
             setUser(data.data)
-            localStorage.setItem('user', JSON.stringify(data.data))
+            setStoredUser(data.data)
           }
         } catch {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          localStorage.removeItem('user')
+          clearAuthData()
         }
       }
       setLoading(false)
@@ -29,12 +35,15 @@ export function AuthProvider({ children }) {
     initAuth()
   }, [])
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, rememberMe = false) => {
     const { data } = await api.post('/auth/login', { email, password })
     if (data.success) {
-      localStorage.setItem('accessToken', data.data.accessToken)
-      localStorage.setItem('refreshToken', data.data.refreshToken)
-      localStorage.setItem('user', JSON.stringify(data.data.user))
+      setAuthData({
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken,
+        user: data.data.user,
+        rememberMe,
+      })
       setUser(data.data.user)
     }
     return data
@@ -47,16 +56,14 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = getRefreshToken()
       if (refreshToken) {
         await api.post('/auth/logout', { refreshToken })
       }
     } catch {
       /* ignore logout errors */
     }
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
+    clearAuthData()
     setUser(null)
   }, [])
 
@@ -64,7 +71,7 @@ export function AuthProvider({ children }) {
     const { data } = await api.put('/users/profile', profileData)
     if (data.success) {
       setUser(data.data)
-      localStorage.setItem('user', JSON.stringify(data.data))
+      setStoredUser(data.data)
     }
     return data
   }, [])

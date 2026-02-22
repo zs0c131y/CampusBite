@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
+import { isRememberMeEnabled } from '@/lib/authStorage'
 import { validateEmail } from '@/lib/validators'
 
 export default function LoginPage() {
@@ -18,6 +19,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    setRememberMe(isRememberMeEnabled())
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -47,13 +52,7 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const data = await login(formData.email, formData.password)
-
-      if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true')
-      } else {
-        localStorage.removeItem('rememberMe')
-      }
+      const data = await login(formData.email, formData.password, rememberMe)
 
       toast.success('Login successful!')
 

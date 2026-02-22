@@ -1,4 +1,10 @@
 import axios from 'axios'
+import {
+  clearAuthData,
+  getAccessToken,
+  getRefreshToken,
+  updateAuthTokens,
+} from '@/lib/authStorage'
 
 const api = axios.create({
   baseURL: '/api',
@@ -6,7 +12,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -26,19 +32,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
+        const refreshToken = getRefreshToken()
         if (!refreshToken) throw new Error('No refresh token')
         const { data } = await axios.post('/api/auth/refresh-token', { refreshToken })
         if (data.success) {
-          localStorage.setItem('accessToken', data.data.accessToken)
-          localStorage.setItem('refreshToken', data.data.refreshToken)
+          updateAuthTokens({
+            accessToken: data.data.accessToken,
+            refreshToken: data.data.refreshToken,
+          })
           originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`
           return api(originalRequest)
         }
       } catch (refreshError) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
+        clearAuthData()
         window.location.href = '/login'
         return Promise.reject(refreshError)
       }

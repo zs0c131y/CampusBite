@@ -23,6 +23,18 @@ const sanitizeTransactionRef = (value, maxLength = 35) =>
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, maxLength);
 
+const addOptionalParams = (params) => {
+  const merchantCode = (process.env.UPI_MERCHANT_CODE || "").trim();
+  if (/^\d{4}$/.test(merchantCode)) {
+    params.set("mc", merchantCode);
+  }
+
+  const transactionUrl = (process.env.APP_URL || process.env.FRONTEND_URL || "").trim();
+  if (/^https?:\/\//i.test(transactionUrl)) {
+    params.set("url", transactionUrl);
+  }
+};
+
 export const isValidUpiId = (upiId) => {
   if (!upiId || typeof upiId !== "string") return false;
   return UPI_ID_REGEX.test(upiId.trim());
@@ -46,21 +58,43 @@ export const generateUpiLink = (upiId, storeName, amount, orderRef) => {
   const paymentRef = sanitizeTransactionRef(orderRef, 35) || "CBPAYMENT";
   const payeeName = sanitizeText(storeName || "CampusBite Store", 40) || "CampusBite Store";
   const note = sanitizeText(`CampusBite ${paymentRef}`, 80) || "CampusBite Payment";
-  const merchantCode = process.env.UPI_MERCHANT_CODE || "0000";
-  const transactionUrl = (process.env.APP_URL || process.env.FRONTEND_URL || "").trim();
   const params = new URLSearchParams({
     pa: normalizedUpiId,
     pn: payeeName,
-    mc: merchantCode,
     am: formattedAmount,
     cu: "INR",
     tr: paymentRef,
     tn: note,
   });
-  if (transactionUrl) {
-    params.set("url", transactionUrl);
+  addOptionalParams(params);
+
+  return `upi://pay?${params.toString()}`;
+};
+
+export const generateUpiCompatibilityLink = (upiId, storeName, amount) => {
+  const normalizedUpiId = (upiId || "").trim().toLowerCase();
+  if (!isValidUpiId(normalizedUpiId)) {
+    const error = new Error("Store UPI ID is invalid. Please contact the store.");
+    error.statusCode = 400;
+    throw error;
   }
 
+  const formattedAmount = formatAmount(amount);
+  if (!formattedAmount) {
+    const error = new Error("Invalid payment amount.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const payeeName = sanitizeText(storeName || "CampusBite Store", 40) || "CampusBite Store";
+  const params = new URLSearchParams({
+    pa: normalizedUpiId,
+    pn: payeeName,
+    am: formattedAmount,
+    cu: "INR",
+    tn: "CampusBite Payment",
+  });
+  addOptionalParams(params);
   return `upi://pay?${params.toString()}`;
 };
 

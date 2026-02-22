@@ -7,7 +7,11 @@ import Store from '../models/Store.js'
 import MenuItem from '../models/MenuItem.js'
 import generateOrderNumber from '../utils/generateOrderNumber.js'
 import { formatOrder } from '../utils/formatters.js'
-import { generateUpiLink, getUpiAppLinks } from '../services/paymentService.js'
+import {
+  generateUpiCompatibilityLink,
+  generateUpiLink,
+  getUpiAppLinks,
+} from '../services/paymentService.js'
 import { generateOtp, getOtpExpiry, validateOtp } from '../services/otpService.js'
 import {
   sendOrderStatusUpdate,
@@ -288,7 +292,13 @@ export const createCheckoutSession = async (req, res, next) => {
       draft.totalAmount,
       paymentReference
     )
+    const upiCompatibilityLink = generateUpiCompatibilityLink(
+      draft.store.upi_id,
+      draft.store.name,
+      draft.totalAmount
+    )
     const upiAppLinks = getUpiAppLinks(upiLink)
+    const upiCompatibilityAppLinks = getUpiAppLinks(upiCompatibilityLink)
 
     res.json({
       success: true,
@@ -318,7 +328,9 @@ export const createCheckoutSession = async (req, res, next) => {
         payment: {
           mode: 'direct_store_upi',
           upiLink,
+          upiCompatibilityLink,
           upiAppLinks,
+          upiCompatibilityAppLinks,
           amount: draft.totalAmount,
           storeName: draft.store.name,
           storeUpiId: draft.store.upi_id,

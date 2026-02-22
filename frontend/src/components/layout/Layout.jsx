@@ -1,6 +1,7 @@
 import { Navbar } from './Navbar'
 import { Toaster } from 'sonner'
 import { cn } from '@/lib/utils'
+import { PwaNudge } from '@/components/shared/PwaNudge'
 
 export function Layout({ children, hideNavbar = false, fluid = false }) {
   return (
@@ -38,6 +39,7 @@ export function Layout({ children, hideNavbar = false, fluid = false }) {
           </div>
         </footer>
       </div>
+      <PwaNudge />
       <Toaster position="top-right" richColors closeButton />
     </div>
   )

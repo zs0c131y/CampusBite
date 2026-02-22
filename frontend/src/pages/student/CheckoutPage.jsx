@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Copy,
-  ExternalLink,
   Receipt,
   ShieldCheck,
   ShoppingCart,
@@ -101,14 +100,26 @@ export default function CheckoutPage() {
     }
   }
 
-  const handleOpenUpi = (mode = 'chooser') => {
-    const chooserLink = paymentSession?.payment?.upiAppLinks?.chooser
-    const genericLink = paymentSession?.payment?.upiLink
-    const targetLink = isAndroidDevice
-      ? mode === 'generic'
-        ? genericLink
-        : chooserLink || genericLink
-      : genericLink
+  const copyPaymentReferenceBestEffort = async () => {
+    const reference = paymentSession?.paymentReference
+    if (!reference || !navigator?.clipboard?.writeText) return
+
+    try {
+      await navigator.clipboard.writeText(reference)
+      toast.success('Payment reference copied. Paste it in app note if asked.')
+    } catch {
+      // best-effort only
+    }
+  }
+
+  const handleOpenUpi = async () => {
+    const chooserLink =
+      paymentSession?.payment?.upiCompatibilityAppLinks?.chooser ||
+      paymentSession?.payment?.upiAppLinks?.chooser
+    const genericLink =
+      paymentSession?.payment?.upiCompatibilityLink ||
+      paymentSession?.payment?.upiLink
+    const targetLink = isAndroidDevice ? chooserLink || genericLink : genericLink
 
     if (!isMobileDevice) {
       toast.info('Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.')
@@ -118,7 +129,9 @@ export default function CheckoutPage() {
       return
     }
 
+    await copyPaymentReferenceBestEffort()
     window.location.href = targetLink
+
     if (isAndroidDevice && targetLink.startsWith('intent://') && genericLink) {
       window.setTimeout(() => {
         if (document.visibilityState === 'visible') {
@@ -434,23 +447,17 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 gap-2">
                       <Button
                         className="h-12 gap-2"
-                        onClick={() => handleOpenUpi('chooser')}
+                        onClick={handleOpenUpi}
                       >
                         <Smartphone className="h-4 w-4" />
-                        Open UPI Apps
-                        <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                        Open Payment App
                       </Button>
-                      <Button
-                        variant="outline"
-                        className="h-11 gap-2"
-                        onClick={() => handleOpenUpi('generic')}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Try Generic UPI Link
-                      </Button>
+                      <p className="text-[11px] text-muted-foreground">
+                        Hint: Payment reference is copied to clipboard automatically when you open the app.
+                      </p>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Android should show installed UPI apps for selection. If it does not, scan QR or pay manually to{' '}
+                      We auto-copy the payment reference for easy paste. If app open fails, scan QR or pay manually to{' '}
                       <span className="font-semibold">{storeUpiId || 'store UPI ID'}</span> for{' '}
                       <span className="font-semibold">Rs {exactPayableAmountText}</span> with reference{' '}
                       <span className="font-semibold">{paymentSession.paymentReference}</span>.
@@ -484,33 +491,6 @@ export default function CheckoutPage() {
                     >
                       <Copy className="h-4 w-4 mr-2" />
                       Copy Store UPI ID
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="justify-start text-sm"
-                      onClick={() =>
-                        handleCopy(
-                          exactPayableAmountText,
-                          'Exact amount copied'
-                        )
-                      }
-                      disabled={!exactPayableAmountText}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Exact Amount
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="justify-start text-sm"
-                      onClick={() =>
-                        handleCopy(
-                          paymentSession.payment?.upiLink || '',
-                          'UPI payment link copied'
-                        )
-                      }
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy UPI Link
                     </Button>
                     <Button
                       variant="ghost"
