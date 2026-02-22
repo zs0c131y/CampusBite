@@ -266,6 +266,11 @@ export default function CheckoutPage() {
 
   const summaryStoreName = paymentSession?.store?.name || cart.storeName || 'Campus Store'
   const summaryAmount = paymentSession?.totalAmount || totalAmount
+  const storeUpiId = paymentSession?.payment?.storeUpiId || paymentSession?.store?.upiId || ''
+  const exactPayableAmount = Number(paymentSession?.totalAmount || 0)
+  const exactPayableAmountText = Number.isFinite(exactPayableAmount)
+    ? exactPayableAmount.toFixed(2)
+    : ''
   const upiLink = paymentSession?.payment?.upiLink || ''
   const qrUrl = upiLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
@@ -352,7 +357,7 @@ export default function CheckoutPage() {
                 </Button>
               ) : (
                 <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-                  Payment session active. Complete UPI payment and submit transaction ID.
+                  Direct-to-store UPI is active. No extra student fee is added.
                 </div>
               )}
             </CardContent>
@@ -374,10 +379,18 @@ export default function CheckoutPage() {
                       <span className="text-muted-foreground">Amount</span>
                       <span className="font-semibold">{formatCurrency(paymentSession.totalAmount)}</span>
                     </div>
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Store UPI ID</span>
+                      <span className="font-semibold break-all text-right">{storeUpiId || 'N/A'}</span>
+                    </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Payment Reference</span>
                       <span className="font-semibold">{paymentSession.paymentReference}</span>
                     </div>
+                  </div>
+
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    Money goes directly to the store UPI ID. CampusBite does not add any extra charge to this amount.
                   </div>
 
                   <div>
@@ -403,6 +416,11 @@ export default function CheckoutPage() {
                         </Button>
                       ))}
                     </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      If app autofill fails, manually pay to <span className="font-semibold">{storeUpiId || 'store UPI ID'}</span> for{' '}
+                      <span className="font-semibold">Rs {exactPayableAmountText}</span> and use reference{' '}
+                      <span className="font-semibold">{paymentSession.paymentReference}</span>.
+                    </p>
                   </div>
 
                   {qrUrl && (
@@ -419,6 +437,34 @@ export default function CheckoutPage() {
                   )}
 
                   <div className="grid grid-cols-1 gap-2">
+                    <Button
+                      variant="ghost"
+                      className="justify-start text-sm"
+                      onClick={() =>
+                        handleCopy(
+                          storeUpiId,
+                          'Store UPI ID copied'
+                        )
+                      }
+                      disabled={!storeUpiId}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Store UPI ID
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start text-sm"
+                      onClick={() =>
+                        handleCopy(
+                          exactPayableAmountText,
+                          'Exact amount copied'
+                        )
+                      }
+                      disabled={!exactPayableAmountText}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Exact Amount
+                    </Button>
                     <Button
                       variant="ghost"
                       className="justify-start text-sm"

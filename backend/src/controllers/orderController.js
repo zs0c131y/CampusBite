@@ -164,11 +164,14 @@ export const createCheckoutSession = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Checkout initiated. Complete payment to place your order.',
+      message:
+        'Direct store UPI checkout initiated. Pay the exact amount to the store UPI ID to continue.',
       data: {
         checkoutToken,
         paymentReference,
         expiresInSeconds: CHECKOUT_TOKEN_EXPIRY_SECONDS,
+        paymentMode: 'direct_store_upi',
+        platformFee: 0,
         store: {
           id: draft.store._id.toString(),
           name: draft.store.name,
@@ -178,6 +181,7 @@ export const createCheckoutSession = async (req, res, next) => {
         totalAmount: draft.totalAmount,
         specialInstructions: draft.specialInstructions,
         payment: {
+          mode: 'direct_store_upi',
           upiLink,
           upiAppLinks,
           amount: draft.totalAmount,
@@ -283,6 +287,7 @@ export const createOrder = async (req, res, next) => {
       items: draft.orderItems,
       total_amount: draft.totalAmount,
       payment_status: 'pending',
+      payment_method: 'direct_store_upi',
       transaction_id: normalizedTransactionId,
       special_instructions: draft.specialInstructions,
     })
