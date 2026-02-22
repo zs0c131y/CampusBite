@@ -76,3 +76,20 @@ export function validateRequired(value, fieldName) {
   }
   return { valid: true, error: null }
 }
+
+export function validateUpiId(upiId) {
+  if (!upiId || !upiId.trim()) {
+    return { valid: false, error: 'UPI ID is required' }
+  }
+
+  const normalized = upiId.trim().toLowerCase()
+  const upiRegex = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/
+  if (!upiRegex.test(normalized)) {
+    return {
+      valid: false,
+      error: 'Enter a valid UPI ID (e.g., campusbite@paytm or 9876543210@ybl)',
+    }
+  }
+
+  return { valid: true, error: null }
+}

@@ -18,6 +18,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { DesktopHint } from '@/components/shared/DesktopHint'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { validateUpiId } from '@/lib/validators'
 
 export default function StoreSettingsPage() {
   const { user } = useAuth()
@@ -111,6 +112,13 @@ export default function StoreSettingsPage() {
       return
     }
 
+    const normalizedUpiId = formData.upi_id.trim().toLowerCase()
+    const upiValidation = validateUpiId(normalizedUpiId)
+    if (!upiValidation.valid) {
+      toast.error(upiValidation.error)
+      return
+    }
+
     setSaving(true)
     try {
       const operatingHours = {
@@ -123,14 +131,12 @@ export default function StoreSettingsPage() {
         const fd = new FormData()
         fd.append('name', formData.name.trim())
         fd.append('description', formData.description.trim())
-        fd.append('upi_id', formData.upi_id.trim())
+        fd.append('upi_id', normalizedUpiId)
         fd.append('operating_hours', JSON.stringify(operatingHours))
         fd.append('image', imageFile)
 
         try {
-          const res = await api.put(`/stores/${store.id || store._id}`, fd, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          })
+          const res = await api.put(`/stores/${store.id || store._id}`, fd)
           setStore(res.data.data.store)
           toast.success('Store settings saved successfully.')
           setImageFile(null)
@@ -144,7 +150,7 @@ export default function StoreSettingsPage() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        upi_id: formData.upi_id.trim(),
+        upi_id: normalizedUpiId,
         operating_hours: operatingHours,
       }
 

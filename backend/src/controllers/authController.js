@@ -9,6 +9,7 @@ import { formatUser } from '../utils/formatters.js'
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService.js'
 
 const CHRIST_UNIVERSITY_DOMAIN = 'christuniversity.in'
+const UPI_ID_REGEX = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/
 
 const isChristUniversityEmail = (email) => {
   if (!email || typeof email !== 'string') return false
@@ -115,6 +116,12 @@ export const registerSchema = z
           message: 'Store UPI ID is required for store employees',
           path: ['storeUpiId'],
         })
+      } else if (!UPI_ID_REGEX.test(data.storeUpiId.trim().toLowerCase())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Store UPI ID format is invalid',
+          path: ['storeUpiId'],
+        })
       }
     }
   })
@@ -185,7 +192,7 @@ export const register = async (req, res, next) => {
     if (role === 'store_employee') {
       await Store.create({
         name: storeName.trim(),
-        upi_id: storeUpiId.trim(),
+        upi_id: storeUpiId.trim().toLowerCase(),
         owner_id: user._id,
       })
     }

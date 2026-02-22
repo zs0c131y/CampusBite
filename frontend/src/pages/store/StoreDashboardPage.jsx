@@ -117,22 +117,24 @@ export default function StoreDashboardPage() {
       <DesktopHint />
 
       {/* Welcome Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Welcome back{user?.name ? `, ${user.name}` : ''}!
-          </h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-2">
-            <Store className="h-4 w-4" />
-            {store?.name || 'Your Store'}
-          </p>
+      <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.7)] backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Welcome back{user?.name ? `, ${user.name}` : ''}!
+            </h1>
+            <p className="text-muted-foreground mt-1 flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              {store?.name || 'Your Store'}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Pending Orders */}
-        <Card className="border-l-4 border-l-yellow-500">
+        <Card className="border-l-4 border-l-yellow-500 bg-linear-to-br from-white to-yellow-50/70">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -149,7 +151,7 @@ export default function StoreDashboardPage() {
         </Card>
 
         {/* Today's Orders */}
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-blue-500 bg-linear-to-br from-white to-sky-50/70">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -166,7 +168,7 @@ export default function StoreDashboardPage() {
         </Card>
 
         {/* Today's Revenue */}
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-green-500 bg-linear-to-br from-white to-green-50/70">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -185,7 +187,7 @@ export default function StoreDashboardPage() {
         </Card>
 
         {/* Active Menu Items */}
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-orange-500 bg-linear-to-br from-white to-orange-50/70">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -194,8 +196,8 @@ export default function StoreDashboardPage() {
                 </p>
                 <p className="text-3xl font-bold mt-1">{activeMenuItems.length}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <UtensilsCrossed className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                <UtensilsCrossed className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>

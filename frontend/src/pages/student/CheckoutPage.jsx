@@ -55,6 +55,9 @@ const buildCrossCheckText = (order) => {
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const cart = useCart()
+  const isMobileDevice =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
 
   const [sessionLoading, setSessionLoading] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -105,12 +108,18 @@ export default function CheckoutPage() {
 
   const handleOpenUpi = (appKey = 'generic') => {
     const appLink = paymentSession?.payment?.upiAppLinks?.[appKey]
-    if (!appLink) {
+    const genericLink = paymentSession?.payment?.upiLink
+    const targetLink = isMobileDevice ? appLink || genericLink : genericLink
+
+    if (!isMobileDevice) {
+      toast.info('Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.')
+    }
+    if (!targetLink) {
       toast.error('UPI link unavailable right now.')
       return
     }
 
-    window.location.href = appLink
+    window.location.href = targetLink
   }
 
   const handleCopy = async (value, successMessage) => {
@@ -257,6 +266,10 @@ export default function CheckoutPage() {
 
   const summaryStoreName = paymentSession?.store?.name || cart.storeName || 'Campus Store'
   const summaryAmount = paymentSession?.totalAmount || totalAmount
+  const upiLink = paymentSession?.payment?.upiLink || ''
+  const qrUrl = upiLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
+    : ''
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -369,6 +382,11 @@ export default function CheckoutPage() {
 
                   <div>
                     <p className="text-sm font-medium mb-2">Pay with UPI App</p>
+                    {!isMobileDevice && (
+                      <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        UPI app deep links are most reliable on mobile browsers.
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       {UPI_APPS.map((app) => (
                         <Button
@@ -386,6 +404,19 @@ export default function CheckoutPage() {
                       ))}
                     </div>
                   </div>
+
+                  {qrUrl && (
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-sm font-medium mb-2">Scan UPI QR</p>
+                      <div className="flex justify-center">
+                        <img
+                          src={qrUrl}
+                          alt="UPI QR Code"
+                          className="h-44 w-44 rounded-md border border-border object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 gap-2">
                     <Button

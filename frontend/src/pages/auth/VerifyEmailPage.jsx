@@ -80,15 +80,21 @@ export default function VerifyEmailPage() {
   }, [token])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-12">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen overflow-hidden bg-transparent px-4 py-12">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-20 left-[10%] h-56 w-56 rounded-full bg-orange-200/18 blur-3xl" />
+        <div className="absolute bottom-[-6rem] right-[8%] h-64 w-64 rounded-full bg-amber-300/14 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md items-center">
+      <div className="w-full">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Email Verification</p>
         </div>
 
-        <Card className="shadow-lg border-0">
+        <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
           <CardHeader className="text-center pb-2">
             <CardTitle className="font-display text-2xl">Verify Your Email</CardTitle>
           </CardHeader>
@@ -154,6 +160,7 @@ export default function VerifyEmailPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )

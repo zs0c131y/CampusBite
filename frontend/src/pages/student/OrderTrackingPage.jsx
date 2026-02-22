@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
-  Circle,
   Clock,
   Package,
   ChefHat,
@@ -20,7 +19,6 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 import { usePolling } from '@/hooks/usePolling'
 import {
   formatCurrency,
@@ -210,7 +208,6 @@ function OtpDisplay({ otp, expiresAt }) {
 export default function OrderTrackingPage() {
   const { id: orderId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -247,7 +244,7 @@ export default function OrderTrackingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     )
@@ -255,7 +252,7 @@ export default function OrderTrackingPage() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Order not found</h2>
@@ -275,7 +272,7 @@ export default function OrderTrackingPage() {
   const paymentStatus = order.paymentStatus || order.payment_status
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         {/* Back Button */}
         <Button
@@ -289,7 +286,7 @@ export default function OrderTrackingPage() {
         </Button>
 
         {/* Order Header */}
-        <div className="mb-6">
+        <div className="mb-6 rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.66)] backdrop-blur-sm">
           <div className="flex items-start justify-between flex-wrap gap-2">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">

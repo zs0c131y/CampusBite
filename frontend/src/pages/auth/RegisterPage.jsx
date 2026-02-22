@@ -15,6 +15,7 @@ import {
   validatePassword,
   validatePhone,
   validateRequired,
+  validateUpiId,
 } from '@/lib/validators'
 
 const ROLES = [
@@ -147,7 +148,12 @@ export default function RegisterPage() {
       if (!storeResult.valid) newErrors.storeName = 'Store name must be at least 2 characters'
 
       const upiResult = validateRequired(formData.storeUpiId, 'Store UPI ID')
-      if (!upiResult.valid) newErrors.storeUpiId = upiResult.error
+      if (!upiResult.valid) {
+        newErrors.storeUpiId = upiResult.error
+      } else {
+        const upiFormatResult = validateUpiId(formData.storeUpiId)
+        if (!upiFormatResult.valid) newErrors.storeUpiId = upiFormatResult.error
+      }
     }
 
     setErrors(newErrors)
@@ -194,15 +200,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 py-12">
-      <div className="w-full max-w-lg">
+    <div className="relative min-h-screen overflow-hidden bg-transparent px-4 py-12">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 left-[10%] h-60 w-60 rounded-full bg-orange-200/18 blur-3xl" />
+        <div className="absolute bottom-[-7rem] right-[6%] h-72 w-72 rounded-full bg-amber-300/16 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-lg items-center">
+      <div className="w-full">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Create your account</p>
         </div>
 
-        <Card className="shadow-lg border-0">
+        <Card className="border border-border/80 bg-card/90 shadow-[0_22px_36px_-28px_rgba(32,23,15,0.68)] backdrop-blur-sm">
           <CardHeader className="text-center pb-2">
             <CardTitle className="font-display text-2xl">
               {step === 1 ? 'Choose your role' : 'Fill in your details'}
@@ -551,6 +563,7 @@ export default function RegisterPage() {
             </p>
           </CardFooter>
         </Card>
+      </div>
       </div>
     </div>
   )

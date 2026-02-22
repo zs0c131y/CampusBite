@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 import {
   formatCurrency,
   formatDate,
@@ -56,7 +55,7 @@ function OrderCard({ order }) {
     .join(', ')
 
   return (
-    <Card className="hover:shadow-sm transition-shadow">
+    <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-24px_rgba(32,23,15,0.6)]">
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div>
@@ -155,7 +154,6 @@ function EmptyState({ tab }) {
 
 export default function OrderHistoryPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [activeTab, setActiveTab] = useState('all')
   const [orders, setOrders] = useState([])
@@ -223,21 +221,21 @@ export default function OrderHistoryPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
         {/* Page Header */}
-        <div className="mb-6">
+        <div className="mb-6 rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.66)] backdrop-blur-sm">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             My Orders
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Track and view your order history
+            Track active orders and review completed purchases.
           </p>
         </div>
 
         {/* Filter Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 rounded-xl border border-border/80 bg-card/80 p-1">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>

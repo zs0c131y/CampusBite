@@ -35,14 +35,14 @@ export function Navbar() {
   const closeMobileMenu = () => setMobileMenuOpen(false)
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/70 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/88 shadow-[0_14px_28px_-26px_rgba(32,23,15,0.85)] backdrop-blur-md supports-[backdrop-filter]:bg-background/78">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link
               to="/"
-              className="group flex items-center space-x-2 text-xl font-bold text-primary"
+              className="group inline-flex items-center gap-2 rounded-xl px-2 py-1 text-xl font-bold text-primary transition-colors hover:bg-accent/40"
             >
               <ChefHat className="h-7 w-7 transition-transform duration-200 group-hover:-translate-y-0.5" />
               <span className="font-display tracking-tight">CampusBite</span>
@@ -50,37 +50,37 @@ export function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
+          <div className="hidden md:flex md:items-center md:gap-1">
             {!isAuthenticated ? (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-4" asChild>
                   <Link to="/login">Login</Link>
                 </Button>
-                <Button asChild>
+                <Button className="h-9 rounded-full px-4" asChild>
                   <Link to="/register">Register</Link>
                 </Button>
               </>
             ) : isStoreEmployee ? (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/store/dashboard" className="flex items-center space-x-1">
                     <Store className="h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/store/orders" className="flex items-center space-x-1">
                     <ClipboardList className="h-4 w-4" />
                     <span>Orders</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/store/menu" className="flex items-center space-x-1">
                     <ChefHat className="h-4 w-4" />
                     <span>Menu</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/store/settings" className="flex items-center space-x-1">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
@@ -92,7 +92,7 @@ export function Navbar() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="relative"
+                    className="relative rounded-full border border-transparent hover:border-border/80"
                     aria-label="Open account menu"
                   >
                     <User className="h-5 w-5" />
@@ -103,26 +103,26 @@ export function Navbar() {
                         className="fixed inset-0 z-10"
                         onClick={() => setProfileDropdownOpen(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-20">
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                      <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border/80 bg-card/95 shadow-xl z-20 backdrop-blur-sm">
+                        <div className="px-4 py-3 border-b border-border/80">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {user.name}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
                         </div>
                         <Link
                           to="/profile"
                           onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-accent/55"
                         >
                           <User className="h-4 w-4 mr-2" />
                           Profile
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg border-t border-gray-100"
+                          className="flex w-full items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50/70 rounded-b-2xl border-t border-border/80"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           Logout
@@ -134,19 +134,19 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/stores" className="flex items-center space-x-1">
                     <Store className="h-4 w-4" />
                     <span>Browse Stores</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/orders" className="flex items-center space-x-1">
                     <ClipboardList className="h-4 w-4" />
                     <span>My Orders</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
                   <Link to="/cart" className="relative flex items-center space-x-1">
                     <ShoppingCart className="h-4 w-4" />
                     <span>Cart</span>
@@ -163,7 +163,7 @@ export function Navbar() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="relative"
+                    className="relative rounded-full border border-transparent hover:border-border/80"
                     aria-label="Open account menu"
                   >
                     <User className="h-5 w-5" />
@@ -174,26 +174,26 @@ export function Navbar() {
                         className="fixed inset-0 z-10"
                         onClick={() => setProfileDropdownOpen(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-20">
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                      <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border/80 bg-card/95 shadow-xl z-20 backdrop-blur-sm">
+                        <div className="px-4 py-3 border-b border-border/80">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {user.name}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
                         </div>
                         <Link
                           to="/profile"
                           onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-accent/55"
                         >
                           <User className="h-4 w-4 mr-2" />
                           Profile
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg border-t border-gray-100"
+                          className="flex w-full items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50/70 rounded-b-2xl border-t border-border/80"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           Logout

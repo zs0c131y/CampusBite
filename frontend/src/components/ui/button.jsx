@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils"
 
 const buttonVariants = {
   variant: {
-    default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+    default: "bg-primary text-primary-foreground shadow-[0_10px_24px_-16px_rgba(154,66,8,0.8)] hover:bg-primary/92 hover:shadow-[0_14px_28px_-16px_rgba(154,66,8,0.9)]",
     destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
-    outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm",
-    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
-    ghost: "hover:bg-accent hover:text-accent-foreground",
+    outline: "border border-input bg-background/95 hover:bg-accent hover:text-accent-foreground shadow-[0_8px_18px_-14px_rgba(32,23,15,0.45)]",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/85 shadow-sm",
+    ghost: "hover:bg-accent/85 hover:text-accent-foreground",
     link: "text-primary underline-offset-4 hover:underline",
     success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm",
     warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm",
@@ -26,7 +26,7 @@ const Button = React.forwardRef(({ className, variant = "default", size = "defau
   return (
     <Comp
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-[0.925rem] font-semibold tracking-[-0.01em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl text-[0.925rem] font-semibold tracking-[-0.01em] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0",
         buttonVariants.variant[variant],
         buttonVariants.size[size],
         className

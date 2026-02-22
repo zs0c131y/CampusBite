@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search,
   ArrowLeft,
@@ -25,7 +25,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 import { formatCurrency } from '@/lib/utils'
 
@@ -49,7 +48,6 @@ function MenuItemSkeleton() {
 export default function StoreMenuPage() {
   const { id: storeId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const cart = useCart()
 
   const [store, setStore] = useState(null)
@@ -208,7 +206,7 @@ export default function StoreMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-24">
+    <div className="min-h-screen bg-transparent pb-24">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         {/* Back Button */}
         <Button
@@ -222,7 +220,7 @@ export default function StoreMenuPage() {
         </Button>
 
         {/* Store Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-6 sm:mb-8 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.7)] backdrop-blur-sm sm:p-5">
           {store.imageUrl ? (
             <div className="h-40 sm:h-56 rounded-xl overflow-hidden mb-4">
               <img
@@ -232,7 +230,7 @@ export default function StoreMenuPage() {
               />
             </div>
           ) : (
-            <div className="h-40 sm:h-56 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mb-4">
+            <div className="h-40 sm:h-56 rounded-xl bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center mb-4">
               <Store className="h-16 w-16 text-white/80" />
             </div>
           )}
@@ -247,7 +245,7 @@ export default function StoreMenuPage() {
         </div>
 
         {/* Search & Filters */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-6 space-y-4 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-[0_12px_28px_-24px_rgba(32,23,15,0.65)] sm:p-5">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -266,10 +264,10 @@ export default function StoreMenuPage() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
                     activeCategory === cat
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      ? 'border-orange-600 bg-orange-600 text-white shadow-sm'
+                      : 'border-border bg-background text-muted-foreground hover:border-orange-300 hover:text-foreground'
                   }`}
                 >
                   {cat}
@@ -307,7 +305,7 @@ export default function StoreMenuPage() {
               return (
                 <Card
                   key={itemId}
-                  className={`overflow-hidden transition-opacity ${
+                  className={`overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_-24px_rgba(32,23,15,0.6)] ${
                     isUnavailable ? 'opacity-60' : ''
                   }`}
                 >
@@ -328,7 +326,7 @@ export default function StoreMenuPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="h-36 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center relative">
+                    <div className="h-36 bg-linear-to-br from-amber-100 to-orange-100 flex items-center justify-center relative">
                       <UtensilsCrossed className="h-10 w-10 text-orange-300" />
                       {isUnavailable && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -402,7 +400,7 @@ export default function StoreMenuPage() {
 
       {/* Cart Summary Floating Bar */}
       {cartItemCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-40">
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 bg-background/95 shadow-[0_-16px_24px_-20px_rgba(32,23,15,0.8)] backdrop-blur-sm">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-orange-100 rounded-full p-2">

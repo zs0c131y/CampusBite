@@ -2,6 +2,8 @@ import Store from '../models/Store.js'
 import MenuItem from '../models/MenuItem.js'
 import { formatStore, formatMenuItem } from '../utils/formatters.js'
 
+const UPI_ID_REGEX = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/
+
 const parseOperatingHours = (value) => {
   if (!value) return undefined
   if (typeof value === 'object') return value
@@ -97,7 +99,16 @@ export const updateStore = async (req, res, next) => {
 
     if (name) store.name = name
     if (description !== undefined) store.description = description
-    if (upi_id) store.upi_id = upi_id
+    if (upi_id) {
+      const normalizedUpiId = upi_id.trim().toLowerCase()
+      if (!UPI_ID_REGEX.test(normalizedUpiId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid UPI ID format.',
+        })
+      }
+      store.upi_id = normalizedUpiId
+    }
     if (is_active !== undefined) store.is_active = is_active
 
     const parsedHours = parseOperatingHours(operating_hours)

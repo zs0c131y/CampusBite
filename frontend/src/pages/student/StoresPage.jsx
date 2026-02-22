@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 
 function StoreCardSkeleton() {
   return (
@@ -28,7 +27,6 @@ function StoreCardSkeleton() {
 
 export default function StoresPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
@@ -76,11 +74,11 @@ export default function StoresPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         {/* Active Orders Banner */}
         {activeOrders.length > 0 && (
-          <div className="mb-6 bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4 flex items-center justify-between">
+          <div className="mb-6 rounded-2xl border border-orange-200/80 bg-linear-to-r from-orange-50 to-amber-50 p-3.5 shadow-sm sm:p-4 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <ShoppingBag className="h-5 w-5 text-orange-600 shrink-0" />
               <span className="text-sm sm:text-base text-orange-800 font-medium">
@@ -98,25 +96,28 @@ export default function StoresPage() {
         )}
 
         {/* Page Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-            Campus Food Outlets
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Browse and order from your favorite campus stores
-          </p>
-        </div>
+        <div className="mb-6 sm:mb-8 rounded-2xl border border-border/80 bg-card/85 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.7)] backdrop-blur-sm sm:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                Campus Food Outlets
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+                Browse and order from your favorite campus stores
+              </p>
+            </div>
 
-        {/* Search Bar */}
-        <div className="relative mb-6 sm:mb-8 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search stores..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search stores..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -164,7 +165,7 @@ export default function StoresPage() {
             {filteredStores.map((store) => (
               <Card
                 key={store._id || store.id}
-                className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
+                className="overflow-hidden cursor-pointer group transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_34px_-24px_rgba(32,23,15,0.65)]"
                 onClick={() => navigate(`/stores/${store._id || store.id}`)}
               >
                 {/* Store Image */}
@@ -177,7 +178,7 @@ export default function StoresPage() {
                     />
                   </div>
                 ) : (
-                  <div className="h-40 bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                  <div className="h-40 bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center">
                     <Store className="h-12 w-12 text-white/80" />
                   </div>
                 )}

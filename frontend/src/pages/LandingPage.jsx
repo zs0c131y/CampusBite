@@ -200,13 +200,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border/80 bg-white/70">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-center px-4 py-6 text-sm sm:px-6 lg:px-8">
-          <p className="text-muted-foreground">
-            &copy; {new Date().getFullYear()} CampusBite
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
