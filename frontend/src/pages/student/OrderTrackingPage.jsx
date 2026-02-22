@@ -212,9 +212,10 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const hasLoadedOrderRef = useRef(false)
 
-  const isActive = order &&
-    !['picked_up', 'cancelled'].includes(order.orderStatus || order.status)
+  const isActive =
+    !order || !['picked_up', 'cancelled'].includes(order.orderStatus || order.status)
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -222,25 +223,19 @@ export default function OrderTrackingPage() {
       if (data.success) {
         setOrder(data.data)
         setError(null)
+        hasLoadedOrderRef.current = true
       }
     } catch (err) {
-      if (!order) {
+      if (!hasLoadedOrderRef.current) {
         setError('Failed to load order details.')
       }
     } finally {
       setLoading(false)
     }
-  }, [orderId, order])
+  }, [orderId])
 
   // Poll for updates on active orders
-  usePolling(fetchOrder, 5000, isActive)
-
-  // Initial fetch (usePolling already calls on mount, but handle non-active case)
-  useEffect(() => {
-    if (!isActive && loading) {
-      fetchOrder()
-    }
-  }, [])
+  usePolling(fetchOrder, 2500, isActive)
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -46,6 +46,7 @@ const STATUS_ORDER = ['placed', 'accepted', 'processing', 'ready', 'picked_up']
 
 export default function OrderDetailPage() {
   const { id } = useParams()
+  const hasLoadedRef = useRef(false)
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -61,32 +62,50 @@ export default function OrderDetailPage() {
   const [otpDialog, setOtpDialog] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async ({ silent = false } = {}) => {
+    const shouldShowLoader = !silent && !hasLoadedRef.current
     try {
-      setLoading(true)
-      setError(null)
+      if (shouldShowLoader) {
+        setLoading(true)
+      }
       const res = await api.get(`/orders/${id}`)
       setOrder(res.data.data.order || res.data.data)
+      setError(null)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load order details.')
+      if (!hasLoadedRef.current) {
+        setError(err.response?.data?.message || 'Failed to load order details.')
+      }
     } finally {
-      setLoading(false)
+      if (!hasLoadedRef.current) {
+        setLoading(false)
+        hasLoadedRef.current = true
+      }
     }
-  }
-
-  useEffect(() => {
-    if (id) fetchOrder()
   }, [id])
 
-  usePolling(fetchOrder, 3000, Boolean(id))
+  useEffect(() => {
+    hasLoadedRef.current = false
+    setLoading(true)
+    setError(null)
+    setOrder(null)
+  }, [id])
+
+  const isPollingEnabled =
+    Boolean(id) && !['picked_up', 'cancelled'].includes(order?.status)
+  usePolling(() => fetchOrder({ silent: hasLoadedRef.current }), 2000, isPollingEnabled)
 
   // Status update
   const handleStatusUpdate = async (newStatus) => {
     setActionLoading(true)
     try {
-      await api.patch(`/orders/${id}/status`, { status: newStatus })
+      const { data } = await api.patch(`/orders/${id}/status`, { status: newStatus })
       toast.success(`Order status updated to ${newStatus}.`)
-      await fetchOrder()
+      const updatedOrder = data?.data?.order
+      if (updatedOrder) {
+        setOrder(updatedOrder)
+      } else {
+        await fetchOrder({ silent: true })
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update status.')
     } finally {
@@ -98,7 +117,7 @@ export default function OrderDetailPage() {
   const handlePaymentConfirm = async (status) => {
     setPaymentLoading(true)
     try {
-      await api.patch(`/orders/${id}/payment-status`, {
+      const { data } = await api.patch(`/orders/${id}/payment-status`, {
         paymentStatus: status,
         transactionId: transactionId || undefined,
       })
@@ -107,7 +126,12 @@ export default function OrderDetailPage() {
       )
       setPaymentDialog(false)
       setTransactionId('')
-      await fetchOrder()
+      const updatedOrder = data?.data?.order
+      if (updatedOrder) {
+        setOrder(updatedOrder)
+      } else {
+        await fetchOrder({ silent: true })
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update payment.')
     } finally {
@@ -118,10 +142,15 @@ export default function OrderDetailPage() {
   const handleOtpVerify = async () => {
     setOtpLoading(true)
     try {
-      await api.post(`/orders/${id}/verify-otp`, { manualConfirm: true })
+      const { data } = await api.post(`/orders/${id}/verify-otp`, { manualConfirm: true })
       toast.success('Pickup confirmed. Order completed.')
       setOtpDialog(false)
-      await fetchOrder()
+      const updatedOrder = data?.data?.order
+      if (updatedOrder) {
+        setOrder(updatedOrder)
+      } else {
+        await fetchOrder({ silent: true })
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'OTP verification failed.')
     } finally {
@@ -490,7 +519,7 @@ export default function OrderDetailPage() {
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" />
+                    <Spinner size="sm" className="border-current border-t-transparent" />
                   ) : (
                     <CheckCircle2 className="h-4 w-4" />
                   )}
@@ -505,7 +534,7 @@ export default function OrderDetailPage() {
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" />
+                    <Spinner size="sm" className="border-current border-t-transparent" />
                   ) : (
                     <ChefHat className="h-4 w-4" />
                   )}
@@ -521,7 +550,7 @@ export default function OrderDetailPage() {
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" />
+                    <Spinner size="sm" className="border-current border-t-transparent" />
                   ) : (
                     <PackageCheck className="h-4 w-4" />
                   )}
@@ -539,7 +568,7 @@ export default function OrderDetailPage() {
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" />
+                    <Spinner size="sm" className="border-current border-t-transparent" />
                   ) : (
                     <CheckCircle2 className="h-4 w-4" />
                   )}
@@ -591,7 +620,7 @@ export default function OrderDetailPage() {
               className="gap-1.5"
             >
               {paymentLoading ? (
-                <Spinner size="sm" />
+                <Spinner size="sm" className="border-current border-t-transparent" />
               ) : (
                 <XCircle className="h-4 w-4" />
               )}
@@ -603,7 +632,7 @@ export default function OrderDetailPage() {
               className="gap-1.5"
             >
               {paymentLoading ? (
-                <Spinner size="sm" />
+                <Spinner size="sm" className="border-current border-t-transparent" />
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
@@ -657,7 +686,7 @@ export default function OrderDetailPage() {
               className="w-full gap-2"
             >
               {otpLoading ? (
-                <Spinner size="sm" />
+                <Spinner size="sm" className="border-current border-t-transparent" />
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
