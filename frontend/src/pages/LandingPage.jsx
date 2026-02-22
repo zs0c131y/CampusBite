@@ -82,7 +82,7 @@ export default function LandingPage() {
               <Link to="/login">Login</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link to="/register" className="inline-flex items-center justify-center gap-1 leading-none">
+              <Link to="/register" className="flex items-center gap-1.5">
                 Join
                 <ChevronRight className="h-4 w-4" />
               </Link>

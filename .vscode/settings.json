@@ -1,0 +1,6 @@
+{
+  "docker.languageserver.diagnostics.ignoreCodes": [
+    "critical_high_vulnerabilities"
+  ],
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
+}
