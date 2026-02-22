@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   Package,
   Clock,
   ShoppingBag,
@@ -14,9 +15,12 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import api from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   formatCurrency,
   formatDate,
+  getTrustTierMeta,
+  getCancellationReasonLabel,
   getStatusColor,
   getStatusLabel,
 } from '@/lib/utils'
@@ -49,6 +53,7 @@ function OrderCard({ order }) {
   const orderId = order._id || order.id
   const orderStatus = order.orderStatus || order.status
   const isActive = ACTIVE_STATUSES.includes(orderStatus)
+  const cancellationReason = order.cancellationReason || order.cancellation_reason
 
   const itemsSummary = (order.items || [])
     .map((item) => `${item.quantity}x ${item.name}`)
@@ -81,6 +86,13 @@ function OrderCard({ order }) {
           <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
             {itemsSummary}
           </p>
+        )}
+
+        {orderStatus === 'cancelled' && cancellationReason && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-800 flex items-start gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{getCancellationReasonLabel(cancellationReason)}</span>
+          </div>
         )}
 
         <div className="flex items-center justify-between pt-1">
@@ -153,8 +165,7 @@ function EmptyState({ tab }) {
 }
 
 export default function OrderHistoryPage() {
-  const navigate = useNavigate()
-
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('all')
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -219,10 +230,38 @@ export default function OrderHistoryPage() {
     const dateB = new Date(b.createdAt || b.created_at)
     return dateB - dateA
   })
+  const trustTierMeta = getTrustTierMeta(user?.trustTier)
+  const restrictionUntil = user?.orderingRestrictedUntil
+    ? new Date(user.orderingRestrictedUntil)
+    : null
+  const isRestricted = Boolean(restrictionUntil && restrictionUntil > new Date())
 
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
+        {(isRestricted || user?.trustTier === 'watch') && (
+          <Card
+            className={`mb-4 ${
+              isRestricted
+                ? 'border-red-200 bg-red-50/70'
+                : 'border-amber-200 bg-amber-50/70'
+            }`}
+          >
+            <CardContent className="p-4">
+              <p className="text-sm font-semibold">
+                {isRestricted
+                  ? 'Ordering temporarily restricted'
+                  : `Trust Tier: ${trustTierMeta.label}`}
+              </p>
+              <p className="text-xs mt-1 text-muted-foreground">
+                {isRestricted
+                  ? `You can place orders again after ${formatDate(restrictionUntil)}.`
+                  : `${trustTierMeta.hint} No-show count: ${user?.noShowCount || 0}.`}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Page Header */}
         <div className="mb-6 rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.66)] backdrop-blur-sm">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">

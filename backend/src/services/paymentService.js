@@ -46,14 +46,20 @@ export const generateUpiLink = (upiId, storeName, amount, orderRef) => {
   const paymentRef = sanitizeTransactionRef(orderRef, 35) || "CBPAYMENT";
   const payeeName = sanitizeText(storeName || "CampusBite Store", 40) || "CampusBite Store";
   const note = sanitizeText(`CampusBite ${paymentRef}`, 80) || "CampusBite Payment";
+  const merchantCode = process.env.UPI_MERCHANT_CODE || "0000";
+  const transactionUrl = (process.env.APP_URL || process.env.FRONTEND_URL || "").trim();
   const params = new URLSearchParams({
     pa: normalizedUpiId,
     pn: payeeName,
+    mc: merchantCode,
     am: formattedAmount,
     cu: "INR",
     tr: paymentRef,
     tn: note,
   });
+  if (transactionUrl) {
+    params.set("url", transactionUrl);
+  }
 
   return `upi://pay?${params.toString()}`;
 };
@@ -63,10 +69,12 @@ const toIntentUri = (query, packageName) =>
 
 export const getUpiAppLinks = (upiLink) => {
   const query = upiLink.replace(/^upi:\/\/pay\?/, "");
+  const fallback = encodeURIComponent(upiLink);
 
   return {
-    // Generic UPI deep-link remains primary. Intent links improve reliability on Android.
+    // Generic UPI deep-link remains primary. Chooser intent helps list installed UPI apps on Android browsers.
     generic: upiLink,
+    chooser: `intent://pay?${query}#Intent;scheme=upi;S.browser_fallback_url=${fallback};end`,
     gpay: toIntentUri(query, "com.google.android.apps.nbu.paisa.user"),
     phonepe: toIntentUri(query, "com.phonepe.app"),
     paytm: toIntentUri(query, "net.one97.paytm"),

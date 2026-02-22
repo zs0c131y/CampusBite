@@ -22,6 +22,7 @@ import api from '@/lib/api'
 import { usePolling } from '@/hooks/usePolling'
 import {
   formatCurrency,
+  getCancellationReasonLabel,
   formatDate,
   getStatusColor,
   getStatusLabel,
@@ -266,6 +267,9 @@ export default function OrderTrackingPage() {
 
   const orderStatus = order.orderStatus || order.status
   const paymentStatus = order.paymentStatus || order.payment_status
+  const cancellationReason = order.cancellationReason || order.cancellation_reason
+  const commitmentDeadline =
+    order.commitmentDeadlineAt || order.commitment_deadline_at
   const needsCommitmentConfirmation =
     paymentStatus === 'success' &&
     orderStatus === 'placed' &&
@@ -352,6 +356,11 @@ export default function OrderTrackingPage() {
               <p className="text-xs text-orange-800">
                 This helps the store avoid no-show waste. Your order may not be accepted until confirmed.
               </p>
+              {commitmentDeadline && (
+                <p className="text-xs text-orange-800">
+                  Confirm by <span className="font-semibold">{formatDate(commitmentDeadline)}</span> to avoid auto-cancellation.
+                </p>
+              )}
               <Button
                 onClick={handleConfirmCommitment}
                 disabled={commitmentLoading}
@@ -364,6 +373,17 @@ export default function OrderTrackingPage() {
                 )}
                 I Am On The Way
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {orderStatus === 'cancelled' && cancellationReason && (
+          <Card className="mb-6 border-red-200 bg-red-50/70">
+            <CardContent className="p-4">
+              <p className="text-sm font-semibold text-red-900">Cancellation Reason</p>
+              <p className="text-xs text-red-800 mt-1">
+                {getCancellationReasonLabel(cancellationReason)}
+              </p>
             </CardContent>
           </Card>
         )}

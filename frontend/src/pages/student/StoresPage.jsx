@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Store, Clock, ArrowRight, ShoppingBag, AlertCircle } from 'lucide-react'
+import { Search, Store, Clock, ArrowRight, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
+import { formatDate } from '@/lib/utils'
 
 function StoreCardSkeleton() {
   return (
@@ -27,11 +29,16 @@ function StoreCardSkeleton() {
 
 export default function StoresPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeOrders, setActiveOrders] = useState([])
+  const restrictionUntil = user?.orderingRestrictedUntil
+    ? new Date(user.orderingRestrictedUntil)
+    : null
+  const isRestricted = Boolean(restrictionUntil && restrictionUntil > new Date())
 
   useEffect(() => {
     fetchStores()
@@ -76,6 +83,25 @@ export default function StoresPage() {
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+        {(isRestricted || user?.trustTier === 'watch') && (
+          <div
+            className={`mb-4 rounded-xl border px-3.5 py-3 text-sm ${
+              isRestricted
+                ? 'border-red-200 bg-red-50 text-red-900'
+                : 'border-amber-200 bg-amber-50 text-amber-900'
+            }`}
+          >
+            <p className="font-semibold">
+              {isRestricted ? 'Ordering temporarily restricted' : 'Reliability policy active'}
+            </p>
+            <p className="mt-1 text-xs opacity-90">
+              {isRestricted
+                ? `You can place orders again after ${formatDate(restrictionUntil)}.`
+                : `No-show count: ${user?.noShowCount || 0}. Confirm on-the-way quickly to avoid restrictions.`}
+            </p>
+          </div>
+        )}
+
         {/* Active Orders Banner */}
         {activeOrders.length > 0 && (
           <div className="mb-6 rounded-2xl border border-orange-200/80 bg-linear-to-r from-orange-50 to-amber-50 p-3.5 shadow-sm sm:p-4 flex items-center justify-between">

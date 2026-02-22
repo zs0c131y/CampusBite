@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   Clock,
   ChefHat,
   CheckCircle2,
@@ -31,7 +32,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DesktopHint } from '@/components/shared/DesktopHint'
 import { usePolling } from '@/hooks/usePolling'
 import api from '@/lib/api'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, getCancellationReasonLabel } from '@/lib/utils'
 
 const STATUS_TABS = [
   { value: 'all', label: 'All' },
@@ -527,6 +528,18 @@ export default function StoreOrdersPage() {
                             </p>
                           </div>
                         )}
+
+                        {order.status === 'cancelled' &&
+                          (order.cancellationReason || order.cancellation_reason) && (
+                            <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-800 flex items-start gap-1.5">
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                              <span>
+                                {getCancellationReasonLabel(
+                                  order.cancellationReason || order.cancellation_reason
+                                )}
+                              </span>
+                            </div>
+                          )}
 
                         {/* OTP Display when ready */}
                         {order.status === 'ready' && order.pickup_otp && (

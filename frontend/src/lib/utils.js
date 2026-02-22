@@ -48,3 +48,35 @@ export function getStatusLabel(status) {
   }
   return labels[status] || status
 }
+
+export function getCancellationReasonLabel(reason) {
+  const labels = {
+    payment_timeout: 'Auto-cancelled: payment not completed in time',
+    no_show_timeout: 'Auto-cancelled: customer did not collect on time',
+    payment_failed: 'Cancelled: payment marked failed',
+  }
+  return labels[reason] || reason || 'Cancelled'
+}
+
+export function getTrustTierMeta(tier) {
+  const normalized = (tier || '').toLowerCase()
+  if (normalized === 'restricted') {
+    return {
+      label: 'Restricted',
+      badgeClass: 'bg-red-100 text-red-800',
+      hint: 'Ordering is temporarily blocked due to repeated no-shows.',
+    }
+  }
+  if (normalized === 'watch') {
+    return {
+      label: 'Watch',
+      badgeClass: 'bg-amber-100 text-amber-800',
+      hint: 'You may need on-the-way confirmation before preparation.',
+    }
+  }
+  return {
+    label: 'Good',
+    badgeClass: 'bg-emerald-100 text-emerald-800',
+    hint: 'Reliable order history.',
+  }
+}

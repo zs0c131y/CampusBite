@@ -32,7 +32,7 @@ import {
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { usePolling } from '@/hooks/usePolling'
 import api from '@/lib/api'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, getCancellationReasonLabel } from '@/lib/utils'
 
 const ORDER_TIMELINE = [
   { status: 'placed', label: 'Order Placed', icon: Clock },
@@ -216,6 +216,7 @@ export default function OrderDetailPage() {
       : customerRole === 'faculty'
       ? order.customer_employee_id || order.customerEmployeeId
       : null
+  const cancellationReason = order.cancellationReason || order.cancellation_reason
   const currentTimelineIdx = STATUS_ORDER.indexOf(order.status)
   const timelineProgressPercent =
     order.status === 'cancelled' || currentTimelineIdx < 0
@@ -337,6 +338,11 @@ export default function OrderDetailPage() {
               <p className="text-sm font-medium text-red-800">
                 This order has been cancelled.
               </p>
+              {cancellationReason && (
+                <p className="text-xs text-red-700 mt-1">
+                  {getCancellationReasonLabel(cancellationReason)}
+                </p>
+              )}
             </div>
           )}
         </CardContent>

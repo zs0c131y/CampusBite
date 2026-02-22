@@ -23,14 +23,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
 import { useCart } from '@/contexts/CartContext'
-import { formatCurrency } from '@/lib/utils'
-
-const UPI_APPS = [
-  { key: 'gpay', name: 'Google Pay', short: 'G' },
-  { key: 'phonepe', name: 'PhonePe', short: 'P' },
-  { key: 'paytm', name: 'Paytm', short: 'T' },
-  { key: 'bhim', name: 'BHIM', short: 'B' },
-]
+import { formatCurrency, getTrustTierMeta } from '@/lib/utils'
 
 const normalizeOrderItems = (items = []) =>
   items.map((item, idx) => ({
@@ -108,10 +101,14 @@ export default function CheckoutPage() {
     }
   }
 
-  const handleOpenUpi = (appKey = 'generic') => {
-    const appLink = paymentSession?.payment?.upiAppLinks?.[appKey]
+  const handleOpenUpi = (mode = 'chooser') => {
+    const chooserLink = paymentSession?.payment?.upiAppLinks?.chooser
     const genericLink = paymentSession?.payment?.upiLink
-    const targetLink = isAndroidDevice ? appLink || genericLink : genericLink
+    const targetLink = isAndroidDevice
+      ? mode === 'generic'
+        ? genericLink
+        : chooserLink || genericLink
+      : genericLink
 
     if (!isMobileDevice) {
       toast.info('Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.')
@@ -275,6 +272,8 @@ export default function CheckoutPage() {
 
   const summaryStoreName = paymentSession?.store?.name || cart.storeName || 'Campus Store'
   const summaryAmount = paymentSession?.totalAmount || totalAmount
+  const noShowPolicy = paymentSession?.noShowPolicy || null
+  const trustTierMeta = getTrustTierMeta(noShowPolicy?.trustTier)
   const storeUpiId = paymentSession?.payment?.storeUpiId || paymentSession?.store?.upiId || ''
   const exactPayableAmount = Number(paymentSession?.totalAmount || 0)
   const exactPayableAmountText = Number.isFinite(exactPayableAmount)
@@ -365,8 +364,31 @@ export default function CheckoutPage() {
                   )}
                 </Button>
               ) : (
-                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-                  Direct-to-store UPI is active. No extra student fee is added.
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+                    Direct-to-store UPI is active. No extra student fee is added.
+                  </div>
+                  {noShowPolicy && (
+                    <div
+                      className={`rounded-lg border px-3 py-2 text-xs ${
+                        noShowPolicy.trustTier === 'restricted'
+                          ? 'border-red-200 bg-red-50 text-red-800'
+                          : noShowPolicy.trustTier === 'watch'
+                          ? 'border-amber-200 bg-amber-50 text-amber-800'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                      }`}
+                    >
+                      <p className="font-semibold">
+                        Trust Tier: {trustTierMeta.label}
+                      </p>
+                      <p className="mt-0.5">
+                        {trustTierMeta.hint}
+                        {noShowPolicy.requiresCommitmentBeforePrep
+                          ? ' Store may wait for your on-the-way confirmation before preparation.'
+                          : ''}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -409,37 +431,40 @@ export default function CheckoutPage() {
                         UPI app deep links are most reliable on mobile browsers.
                       </div>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      {UPI_APPS.map((app) => (
-                        <Button
-                          key={app.key}
-                          variant="outline"
-                          className="h-12 justify-start gap-2"
-                          onClick={() => handleOpenUpi(app.key)}
-                        >
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
-                            {app.short}
-                          </span>
-                          <span className="text-xs">{app.name}</span>
-                          <ExternalLink className="ml-auto h-3 w-3 opacity-70" />
-                        </Button>
-                      ))}
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        className="h-12 gap-2"
+                        onClick={() => handleOpenUpi('chooser')}
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        Open UPI Apps
+                        <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-11 gap-2"
+                        onClick={() => handleOpenUpi('generic')}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Try Generic UPI Link
+                      </Button>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      If app autofill fails, manually pay to <span className="font-semibold">{storeUpiId || 'store UPI ID'}</span> for{' '}
-                      <span className="font-semibold">Rs {exactPayableAmountText}</span> and use reference{' '}
+                      Android should show installed UPI apps for selection. If it does not, scan QR or pay manually to{' '}
+                      <span className="font-semibold">{storeUpiId || 'store UPI ID'}</span> for{' '}
+                      <span className="font-semibold">Rs {exactPayableAmountText}</span> with reference{' '}
                       <span className="font-semibold">{paymentSession.paymentReference}</span>.
                     </p>
                   </div>
 
                   {qrUrl && (
                     <div className="rounded-lg border bg-background p-3">
-                      <p className="text-sm font-medium mb-2">Scan UPI QR</p>
+                      <p className="text-sm font-medium mb-2">Scan UPI QR (Most Reliable)</p>
                       <div className="flex justify-center">
                         <img
                           src={qrUrl}
                           alt="UPI QR Code"
-                          className="h-44 w-44 rounded-md border border-border object-contain"
+                          className="h-52 w-52 rounded-md border border-border object-contain"
                         />
                       </div>
                     </div>

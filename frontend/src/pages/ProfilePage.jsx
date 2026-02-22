@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  AlertTriangle,
   ArrowRight,
   Briefcase,
   ClipboardList,
@@ -17,7 +18,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getTrustTierMeta } from '@/lib/utils'
 import {
   isChristUniversityEmail,
   validateName,
@@ -219,9 +220,29 @@ export default function ProfilePage() {
   const RoleIcon = roleMeta.icon
   const storeData = currentUser.store || null
   const roleIdValue = currentUser[roleMeta.idField]
+  const trustTierMeta = getTrustTierMeta(currentUser.trustTier)
+  const restrictionUntil = currentUser.orderingRestrictedUntil
+    ? new Date(currentUser.orderingRestrictedUntil)
+    : null
+  const isRestricted = Boolean(restrictionUntil && restrictionUntil > new Date())
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+      {isStudentOrFaculty && isRestricted && (
+        <Card className="border-red-200 bg-red-50/70">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-700 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-900">Ordering Restricted</p>
+              <p className="text-xs text-red-800 mt-1">
+                Your ordering is temporarily restricted due to repeated no-shows until{' '}
+                <span className="font-semibold">{formatDate(restrictionUntil)}</span>.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="overflow-hidden border-0 shadow-lg">
         <div className={`bg-linear-to-r ${roleMeta.gradient} p-6 text-white`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -347,6 +368,19 @@ export default function ProfilePage() {
                   {currentUser.isEmailVerified ? 'Yes' : 'No'}
                 </span>
               </div>
+              {isStudentOrFaculty && (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Trust Tier</span>
+                    <span className="font-medium">{trustTierMeta.label}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">No-show Count</span>
+                    <span className="font-medium">{currentUser.noShowCount || 0}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{trustTierMeta.hint}</p>
+                </>
+              )}
               {roleIdValue && (
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">{roleMeta.idLabel}</span>
