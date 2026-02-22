@@ -437,7 +437,7 @@ export default function StoreOrdersPage() {
                             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                               Transaction ID
                             </p>
-                            <p className="text-xs font-semibold break-all font-mono">
+                            <p className="text-xs font-semibold break-all tracking-wide">
                               {order.transactionId || order.transaction_id || 'N/A'}
                             </p>
                           </div>
@@ -479,7 +479,7 @@ export default function StoreOrdersPage() {
                             <p className="text-xs font-medium text-green-800 mb-1">
                               Pickup OTP
                             </p>
-                            <p className="text-2xl font-mono font-bold tracking-[0.3em] text-green-700">
+                            <p className="text-2xl font-bold tracking-[0.3em] text-green-700">
                               {order.pickup_otp}
                             </p>
                             <p className="text-xs text-green-600 mt-1">
@@ -594,7 +594,7 @@ export default function StoreOrdersPage() {
               <p className="text-xs font-medium text-blue-800 mb-1">
                 Expected OTP (shown to customer)
               </p>
-              <p className="text-2xl font-mono font-bold tracking-[0.3em] text-blue-700">
+              <p className="text-2xl font-bold tracking-[0.3em] text-blue-700">
                 {otpDialog.order.pickup_otp}
               </p>
             </div>

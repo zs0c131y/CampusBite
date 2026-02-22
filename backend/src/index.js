@@ -24,6 +24,18 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isProduction = (process.env.NODE_ENV || "").toLowerCase() === "production";
+
+app.set("trust proxy", 1);
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.APP_URL,
+  process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : null,
+  !isProduction ? "http://localhost:5173" : null,
+]
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/$/, ""));
 
 // Security middleware
 app.use(
@@ -35,7 +47,14 @@ app.use(
 // CORS
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/$/, "");
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalized)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -98,6 +117,14 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
+
+if (isProduction) {
+  const frontendDistPath = path.join(__dirname, "../../frontend/dist");
+  app.use(express.static(frontendDistPath));
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+}
 
 // 404 handler
 app.use((req, res) => {

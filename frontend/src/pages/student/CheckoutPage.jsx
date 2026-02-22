@@ -211,7 +211,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Transaction ID</span>
-                  <span className="font-semibold font-mono">
+                  <span className="font-semibold tracking-wide">
                     {orderResult.transactionId || orderResult.transaction_id}
                   </span>
                 </div>

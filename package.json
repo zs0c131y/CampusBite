@@ -7,7 +7,9 @@
     "dev": "node dev.js",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "docker:build": "docker build -t campusbite:latest -f Dockerfile .",
+    "fly:deploy": "fly deploy --config fly.toml"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

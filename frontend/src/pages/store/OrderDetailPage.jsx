@@ -320,7 +320,7 @@ export default function OrderDetailPage() {
             <p className="text-sm font-medium text-green-800 mb-2">
               Pickup OTP - Verify with customer
             </p>
-            <p className="text-4xl font-mono font-bold tracking-[0.4em] text-green-700">
+            <p className="text-4xl font-bold tracking-[0.4em] text-green-700">
               {order.pickup_otp}
             </p>
             <p className="text-xs text-green-600 mt-2">
@@ -396,7 +396,7 @@ export default function OrderDetailPage() {
             {order.transaction_id && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Transaction ID</span>
-                <span className="text-sm font-mono break-all ml-3 text-right">{order.transaction_id}</span>
+                <span className="text-sm tracking-wide break-all ml-3 text-right">{order.transaction_id}</span>
               </div>
             )}
             <Separator />
@@ -635,7 +635,7 @@ export default function OrderDetailPage() {
               <p className="text-xs font-medium text-blue-800 mb-1">
                 Expected OTP (shown to customer)
               </p>
-              <p className="text-2xl font-mono font-bold tracking-[0.3em] text-blue-700">
+              <p className="text-2xl font-bold tracking-[0.3em] text-blue-700">
                 {order.pickup_otp}
               </p>
             </div>
