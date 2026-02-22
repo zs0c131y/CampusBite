@@ -465,6 +465,19 @@ export default function StoreOrdersPage() {
                             </span>
                           </p>
                         )}
+                        {(order.status === 'placed' || order.status === 'accepted') && (
+                          <p className="text-xs mt-1">
+                            {order.isCommitmentConfirmed || order.is_commitment_confirmed ? (
+                              <span className="text-emerald-700 font-medium">
+                                Commitment: Customer confirmed on the way
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 font-medium">
+                                Commitment: Pending customer confirmation
+                              </span>
+                            )}
+                          </p>
+                        )}
 
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="rounded-md border bg-muted/30 px-2.5 py-2">

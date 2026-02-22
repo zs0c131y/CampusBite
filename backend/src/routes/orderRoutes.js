@@ -8,6 +8,7 @@ import {
   updatePaymentStatus,
   updateOrderStatus,
   verifyOrderOtp,
+  confirmOrderCommitment,
   pollOrderStatus,
 } from '../controllers/orderController.js';
 
@@ -20,6 +21,7 @@ router.get('/:id', authenticate, getOrderById);
 router.patch('/:id/payment-status', authenticate, authorize('store_employee'), updatePaymentStatus);
 router.patch('/:id/status', authenticate, authorize('store_employee'), updateOrderStatus);
 router.post('/:id/verify-otp', authenticate, authorize('store_employee'), verifyOrderOtp);
+router.post('/:id/confirm-commitment', authenticate, authorize('student', 'faculty'), confirmOrderCommitment);
 router.get('/:id/poll-status', authenticate, pollOrderStatus);
 
 export default router;

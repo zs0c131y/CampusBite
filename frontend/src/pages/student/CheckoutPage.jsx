@@ -58,6 +58,8 @@ export default function CheckoutPage() {
   const isMobileDevice =
     typeof navigator !== 'undefined' &&
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  const isAndroidDevice =
+    typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
 
   const [sessionLoading, setSessionLoading] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -109,7 +111,7 @@ export default function CheckoutPage() {
   const handleOpenUpi = (appKey = 'generic') => {
     const appLink = paymentSession?.payment?.upiAppLinks?.[appKey]
     const genericLink = paymentSession?.payment?.upiLink
-    const targetLink = isMobileDevice ? appLink || genericLink : genericLink
+    const targetLink = isAndroidDevice ? appLink || genericLink : genericLink
 
     if (!isMobileDevice) {
       toast.info('Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.')
@@ -120,6 +122,13 @@ export default function CheckoutPage() {
     }
 
     window.location.href = targetLink
+    if (isAndroidDevice && targetLink.startsWith('intent://') && genericLink) {
+      window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href = genericLink
+        }
+      }, 1200)
+    }
   }
 
   const handleCopy = async (value, successMessage) => {
@@ -138,8 +147,8 @@ export default function CheckoutPage() {
     }
 
     const normalizedTxnId = transactionId.trim().toUpperCase()
-    if (!/^[A-Z0-9]{8,40}$/.test(normalizedTxnId)) {
-      toast.error('Enter a valid transaction ID (8-40 letters/numbers).')
+    if (normalizedTxnId && !/^[A-Z0-9]{8,40}$/.test(normalizedTxnId)) {
+      toast.error('Transaction ID must be 8-40 letters/numbers if provided.')
       return
     }
 
@@ -147,7 +156,7 @@ export default function CheckoutPage() {
     try {
       const { data } = await api.post('/orders', {
         checkoutToken: paymentSession.checkoutToken,
-        transactionId: normalizedTxnId,
+        transactionId: normalizedTxnId || undefined,
       })
 
       if (data.success) {
@@ -496,14 +505,17 @@ export default function CheckoutPage() {
                   <Separator />
 
                   <div className="space-y-2">
-                    <Label htmlFor="transactionId">UPI Transaction ID (after payment)</Label>
+                    <Label htmlFor="transactionId">UPI Transaction ID (optional)</Label>
                     <Input
                       id="transactionId"
                       value={transactionId}
                       onChange={(e) => setTransactionId(e.target.value.toUpperCase())}
-                      placeholder="e.g. T20260222ABCD1234"
+                      placeholder="Optional: paste only if available"
                       maxLength={40}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      You can proceed without transaction ID. Store can verify directly in their UPI app.
+                    </p>
                   </div>
 
                   {paymentState === 'failed' && (

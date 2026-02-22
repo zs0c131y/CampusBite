@@ -397,6 +397,17 @@ export default function OrderDetailPage() {
                 </span>
               </div>
             )}
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                <span className="text-muted-foreground">Commitment: </span>
+                <span className="font-medium">
+                  {order.isCommitmentConfirmed || order.is_commitment_confirmed
+                    ? 'Confirmed on the way'
+                    : 'Pending confirmation'}
+                </span>
+              </span>
+            </div>
           </CardContent>
         </Card>
 

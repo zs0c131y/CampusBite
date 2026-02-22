@@ -23,6 +23,14 @@ const userSchema = new mongoose.Schema(
     email_verification_token: { type: String, default: null },
     password_reset_token: { type: String, default: null },
     password_reset_expires: { type: Date, default: null },
+    no_show_count: { type: Number, default: 0, min: 0 },
+    trust_tier: {
+      type: String,
+      enum: ['good', 'watch', 'restricted'],
+      default: 'good',
+    },
+    ordering_restricted_until: { type: Date, default: null },
+    last_no_show_at: { type: Date, default: null },
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

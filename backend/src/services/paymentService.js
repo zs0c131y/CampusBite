@@ -1,10 +1,27 @@
 const UPI_ID_REGEX = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/;
+const SAFE_TEXT_REGEX = /[^a-zA-Z0-9 .,&()/-]/g;
 
 const formatAmount = (amount) => {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) return null;
   return value.toFixed(2);
 };
+
+const sanitizeText = (value, maxLength = 40) => {
+  if (!value) return "";
+  return value
+    .toString()
+    .replace(SAFE_TEXT_REGEX, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+};
+
+const sanitizeTransactionRef = (value, maxLength = 35) =>
+  (value || "")
+    .toString()
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, maxLength);
 
 export const isValidUpiId = (upiId) => {
   if (!upiId || typeof upiId !== "string") return false;
@@ -26,28 +43,34 @@ export const generateUpiLink = (upiId, storeName, amount, orderRef) => {
     throw error;
   }
 
-  const paymentRef = (orderRef || "").trim().slice(0, 35) || "CBPAYMENT";
+  const paymentRef = sanitizeTransactionRef(orderRef, 35) || "CBPAYMENT";
+  const payeeName = sanitizeText(storeName || "CampusBite Store", 40) || "CampusBite Store";
+  const note = sanitizeText(`CampusBite ${paymentRef}`, 80) || "CampusBite Payment";
   const params = new URLSearchParams({
     pa: normalizedUpiId,
-    pn: (storeName || "CampusBite Store").trim(),
+    pn: payeeName,
     am: formattedAmount,
     cu: "INR",
     tr: paymentRef,
-    tn: `CampusBite Order ${paymentRef}`,
+    tn: note,
   });
 
   return `upi://pay?${params.toString()}`;
 };
 
+const toIntentUri = (query, packageName) =>
+  `intent://pay?${query}#Intent;scheme=upi;package=${packageName};end`;
+
 export const getUpiAppLinks = (upiLink) => {
   const query = upiLink.replace(/^upi:\/\/pay\?/, "");
 
   return {
-    // Generic UPI deep-link is the most interoperable option across apps.
+    // Generic UPI deep-link remains primary. Intent links improve reliability on Android.
     generic: upiLink,
-    gpay: `tez://upi/pay?${query}`,
-    phonepe: `phonepe://pay?${query}`,
-    paytm: `paytmmp://pay?${query}`,
-    bhim: `upi://pay?${query}`,
+    gpay: toIntentUri(query, "com.google.android.apps.nbu.paisa.user"),
+    phonepe: toIntentUri(query, "com.phonepe.app"),
+    paytm: toIntentUri(query, "net.one97.paytm"),
+    bhim: toIntentUri(query, "in.org.npci.upiapp"),
+    fallback: upiLink,
   };
 };

@@ -212,6 +212,7 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [commitmentLoading, setCommitmentLoading] = useState(false)
   const hasLoadedOrderRef = useRef(false)
 
   const isActive =
@@ -265,6 +266,26 @@ export default function OrderTrackingPage() {
 
   const orderStatus = order.orderStatus || order.status
   const paymentStatus = order.paymentStatus || order.payment_status
+  const needsCommitmentConfirmation =
+    paymentStatus === 'success' &&
+    orderStatus === 'placed' &&
+    !order.isCommitmentConfirmed &&
+    !order.is_commitment_confirmed
+
+  const handleConfirmCommitment = async () => {
+    setCommitmentLoading(true)
+    try {
+      const { data } = await api.post(`/orders/${orderId}/confirm-commitment`)
+      if (data.success) {
+        setOrder(data.data.order || data.data)
+        toast.success(data.message || 'Commitment confirmed.')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Unable to confirm commitment right now.')
+    } finally {
+      setCommitmentLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -321,6 +342,31 @@ export default function OrderTrackingPage() {
             <OrderTimeline currentStatus={orderStatus} />
           </CardContent>
         </Card>
+
+        {needsCommitmentConfirmation && (
+          <Card className="mb-6 border-orange-200 bg-orange-50/60">
+            <CardContent className="p-4 space-y-3">
+              <p className="text-sm font-medium text-orange-900">
+                Confirm you are on the way
+              </p>
+              <p className="text-xs text-orange-800">
+                This helps the store avoid no-show waste. Your order may not be accepted until confirmed.
+              </p>
+              <Button
+                onClick={handleConfirmCommitment}
+                disabled={commitmentLoading}
+                className="w-full gap-2"
+              >
+                {commitmentLoading ? (
+                  <Spinner size="sm" className="border-current border-t-transparent" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                I Am On The Way
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Order Items */}
         <Card className="mb-6">
