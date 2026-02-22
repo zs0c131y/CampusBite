@@ -1,20 +1,23 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
+import dns from "dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-import { initDatabase } from './config/db.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import authRoutes from './routes/authRoutes.js';
-import storeRoutes from './routes/storeRoutes.js';
-import menuRoutes from './routes/menuRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import userRoutes from './routes/userRoutes.js';
+import { initDatabase } from "./config/db.js";
+import { runStartupPreflight } from "./config/preflight.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import authRoutes from "./routes/authRoutes.js";
+import storeRoutes from "./routes/storeRoutes.js";
+import menuRoutes from "./routes/menuRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,17 +26,21 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // CORS
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -43,10 +50,10 @@ const limiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many requests. Please try again later.',
+    message: "Too many requests. Please try again later.",
   },
 });
-app.use('/api/', limiter);
+app.use("/api/", limiter);
 
 // Auth-specific stricter rate limit
 const authLimiter = rateLimit({
@@ -56,41 +63,41 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many authentication attempts. Please try again later.',
+    message: "Too many authentication attempts. Please try again later.",
   },
 });
-app.use('/api/auth/', authLimiter);
+app.use("/api/auth/", authLimiter);
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Logging
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan("combined"));
 }
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     success: true,
-    message: 'CampusBite API is running.',
+    message: "CampusBite API is running.",
     timestamp: new Date().toISOString(),
   });
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/stores', storeRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/users', userRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/stores", storeRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/users", userRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -106,14 +113,21 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
+    runStartupPreflight();
     await initDatabase();
-    console.log('Database initialized successfully.');
+    console.log("[Startup] Database initialized successfully.");
 
     app.listen(PORT, () => {
-      console.log(`CampusBite server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+      console.log(
+        `CampusBite server running on port ${PORT} in ${process.env.NODE_ENV || "development"} mode`,
+      );
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error("[Startup] Failed to start server.");
+    console.error(`[Startup] ${error.message}`);
+    if (error.cause?.message) {
+      console.error(`[Startup] Cause: ${error.cause.message}`);
+    }
     process.exit(1);
   }
 };

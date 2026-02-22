@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { PasswordRequirements } from '@/components/shared/PasswordRequirements'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   validateName,
   validateEmail,
+  validateChristUniversityEmail,
   validatePassword,
   validatePhone,
   validateRequired,
@@ -65,6 +67,7 @@ export default function RegisterPage() {
     employeeId: '',
     phoneNumber: '',
     storeName: '',
+    storeUpiId: '',
   })
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
@@ -103,7 +106,10 @@ export default function RegisterPage() {
     const nameResult = validateName(formData.name)
     if (!nameResult.valid) newErrors.name = nameResult.error
 
-    const emailResult = validateEmail(formData.email)
+    const emailResult =
+      selectedRole === 'student' || selectedRole === 'faculty'
+        ? validateChristUniversityEmail(formData.email)
+        : validateEmail(formData.email)
     if (!emailResult.valid) newErrors.email = emailResult.error
 
     const passwordResult = validatePassword(formData.password)
@@ -139,6 +145,9 @@ export default function RegisterPage() {
 
       const storeResult = validateName(formData.storeName)
       if (!storeResult.valid) newErrors.storeName = 'Store name must be at least 2 characters'
+
+      const upiResult = validateRequired(formData.storeUpiId, 'Store UPI ID')
+      if (!upiResult.valid) newErrors.storeUpiId = upiResult.error
     }
 
     setErrors(newErrors)
@@ -155,6 +164,7 @@ export default function RegisterPage() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
         role: selectedRole,
       }
 
@@ -168,6 +178,7 @@ export default function RegisterPage() {
         payload.employeeId = formData.employeeId.trim()
         payload.phoneNumber = formData.phoneNumber.trim()
         payload.storeName = formData.storeName.trim()
+        payload.storeUpiId = formData.storeUpiId.trim()
       }
 
       await register(payload)
@@ -187,13 +198,13 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600 tracking-tight">CampusBite</h1>
+          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Create your account</p>
         </div>
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">
+            <CardTitle className="font-display text-2xl">
               {step === 1 ? 'Choose your role' : 'Fill in your details'}
             </CardTitle>
             <CardDescription>
@@ -294,12 +305,22 @@ export default function RegisterPage() {
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={
+                      selectedRole === 'student' || selectedRole === 'faculty'
+                        ? 'you@christuniversity.in'
+                        : 'you@example.com'
+                    }
                     value={formData.email}
                     onChange={handleChange}
                     error={!!errors.email}
                     autoComplete="email"
                   />
+                  {(selectedRole === 'student' || selectedRole === 'faculty') && (
+                    <p className="text-xs text-muted-foreground">
+                      Use your official Christ University email. Subdomains like
+                      <span className="font-medium"> course.christuniversity.in</span> are accepted.
+                    </p>
+                  )}
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
 
@@ -317,7 +338,7 @@ export default function RegisterPage() {
                     autoComplete="new-password"
                   />
                   {formData.password && (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${passwordStrength.color}`}
@@ -335,6 +356,7 @@ export default function RegisterPage() {
                       >
                         Password strength: {passwordStrength.level}
                       </p>
+                      <PasswordRequirements password={formData.password} />
                     </div>
                   )}
                   {errors.password && (
@@ -363,7 +385,9 @@ export default function RegisterPage() {
                 {/* Student: Register Number */}
                 {selectedRole === 'student' && (
                   <div className="space-y-2">
-                    <Label htmlFor="registerNumber">Register Number</Label>
+                    <Label htmlFor="registerNumber">
+                      Register Number <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="registerNumber"
                       name="registerNumber"
@@ -371,6 +395,7 @@ export default function RegisterPage() {
                       value={formData.registerNumber}
                       onChange={handleChange}
                       error={!!errors.registerNumber}
+                      required
                     />
                     {errors.registerNumber && (
                       <p className="text-xs text-destructive">{errors.registerNumber}</p>
@@ -381,7 +406,9 @@ export default function RegisterPage() {
                 {/* Faculty: Employee ID */}
                 {selectedRole === 'faculty' && (
                   <div className="space-y-2">
-                    <Label htmlFor="employeeId">Employee ID</Label>
+                    <Label htmlFor="employeeId">
+                      Employee ID <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="employeeId"
                       name="employeeId"
@@ -389,6 +416,7 @@ export default function RegisterPage() {
                       value={formData.employeeId}
                       onChange={handleChange}
                       error={!!errors.employeeId}
+                      required
                     />
                     {errors.employeeId && (
                       <p className="text-xs text-destructive">{errors.employeeId}</p>
@@ -400,7 +428,9 @@ export default function RegisterPage() {
                 {selectedRole === 'store_employee' && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="employeeId">Employee ID</Label>
+                      <Label htmlFor="employeeId">
+                        Employee ID <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="employeeId"
                         name="employeeId"
@@ -408,6 +438,7 @@ export default function RegisterPage() {
                         value={formData.employeeId}
                         onChange={handleChange}
                         error={!!errors.employeeId}
+                        required
                       />
                       {errors.employeeId && (
                         <p className="text-xs text-destructive">{errors.employeeId}</p>
@@ -443,6 +474,21 @@ export default function RegisterPage() {
                       />
                       {errors.storeName && (
                         <p className="text-xs text-destructive">{errors.storeName}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="storeUpiId">Store UPI ID</Label>
+                      <Input
+                        id="storeUpiId"
+                        name="storeUpiId"
+                        placeholder="campusbite@upi"
+                        value={formData.storeUpiId}
+                        onChange={handleChange}
+                        error={!!errors.storeUpiId}
+                      />
+                      {errors.storeUpiId && (
+                        <p className="text-xs text-destructive">{errors.storeUpiId}</p>
                       )}
                     </div>
                   </>

@@ -1,8 +1,18 @@
+const CHRIST_UNIVERSITY_DOMAIN = 'christuniversity.in'
+
 export function validateName(name) {
   if (!name || name.trim().length < 2) {
     return { valid: false, error: 'Name must be at least 2 characters long' }
   }
   return { valid: true, error: null }
+}
+
+export function isChristUniversityEmail(email) {
+  if (!email || typeof email !== 'string') return false
+  const normalized = email.trim().toLowerCase()
+  const domain = normalized.split('@')[1]
+  if (!domain) return false
+  return domain === CHRIST_UNIVERSITY_DOMAIN || domain.endsWith(`.${CHRIST_UNIVERSITY_DOMAIN}`)
 }
 
 export function validateEmail(email) {
@@ -13,6 +23,20 @@ export function validateEmail(email) {
   if (!emailRegex.test(email)) {
     return { valid: false, error: 'Please enter a valid email address' }
   }
+  return { valid: true, error: null }
+}
+
+export function validateChristUniversityEmail(email) {
+  const baseValidation = validateEmail(email)
+  if (!baseValidation.valid) return baseValidation
+
+  if (!isChristUniversityEmail(email)) {
+    return {
+      valid: false,
+      error: 'Use your christuniversity.in email (subdomains like course.christuniversity.in are allowed)',
+    }
+  }
+
   return { valid: true, error: null }
 }
 

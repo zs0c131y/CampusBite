@@ -28,9 +28,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { DesktopHint } from '@/components/shared/DesktopHint'
 import { usePolling } from '@/hooks/usePolling'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const STATUS_TABS = [
@@ -43,7 +43,6 @@ const STATUS_TABS = [
 ]
 
 export default function StoreOrdersPage() {
-  const { user } = useAuth()
   const navigate = useNavigate()
 
   const [orders, setOrders] = useState([])
@@ -58,9 +57,7 @@ export default function StoreOrdersPage() {
 
   // OTP dialog
   const [otpDialog, setOtpDialog] = useState({ open: false, order: null })
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
   const [otpLoading, setOtpLoading] = useState(false)
-  const otpRefs = useRef([])
 
   // New orders indicator
   const prevPlacedCountRef = useRef(0)
@@ -123,9 +120,10 @@ export default function StoreOrdersPage() {
   // Payment confirmation
   const handlePaymentConfirm = async (status) => {
     if (!paymentDialog.order) return
+    const orderId = paymentDialog.order.id || paymentDialog.order._id
     setPaymentLoading(true)
     try {
-      await api.patch(`/orders/${paymentDialog.order.id}/payment-status`, {
+      await api.patch(`/orders/${orderId}/payment-status`, {
         paymentStatus: status,
         transactionId: transactionId || undefined,
       })
@@ -146,56 +144,15 @@ export default function StoreOrdersPage() {
     }
   }
 
-  // OTP handling
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) {
-      value = value.slice(-1)
-    }
-    if (value && !/^\d$/.test(value)) return
-
-    const newDigits = [...otpDigits]
-    newDigits[index] = value
-    setOtpDigits(newDigits)
-
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length > 0) {
-      const newDigits = [...otpDigits]
-      for (let i = 0; i < 6; i++) {
-        newDigits[i] = pasted[i] || ''
-      }
-      setOtpDigits(newDigits)
-      const focusIdx = Math.min(pasted.length, 5)
-      otpRefs.current[focusIdx]?.focus()
-    }
-  }
-
   const handleOtpVerify = async () => {
     if (!otpDialog.order) return
-    const otp = otpDigits.join('')
-    if (otp.length !== 6) {
-      toast.error('Please enter all 6 digits of the OTP.')
-      return
-    }
+    const orderId = otpDialog.order.id || otpDialog.order._id
 
     setOtpLoading(true)
     try {
-      await api.post(`/orders/${otpDialog.order.id}/verify-otp`, { otp })
-      toast.success('OTP verified! Order completed successfully.')
+      await api.post(`/orders/${orderId}/verify-otp`, { manualConfirm: true })
+      toast.success('Pickup confirmed. Order completed successfully.')
       setOtpDialog({ open: false, order: null })
-      setOtpDigits(['', '', '', '', '', ''])
       const res = await api.get('/orders')
       const allOrders = res.data.data.orders || res.data.data || []
       setOrders(Array.isArray(allOrders) ? allOrders : [])
@@ -208,7 +165,8 @@ export default function StoreOrdersPage() {
 
   // Render action buttons based on status
   const renderActions = (order) => {
-    const isLoading = actionLoading === order.id
+    const orderId = order.id || order._id
+    const isLoading = actionLoading === orderId
     const isPaid = order.payment_status === 'success'
 
     return (
@@ -229,7 +187,7 @@ export default function StoreOrdersPage() {
         {order.status === 'placed' && isPaid && (
           <Button
             size="sm"
-            onClick={() => handleStatusUpdate(order.id, 'accepted')}
+            onClick={() => handleStatusUpdate(orderId, 'accepted')}
             disabled={isLoading}
             className="gap-1.5"
           >
@@ -241,7 +199,7 @@ export default function StoreOrdersPage() {
         {order.status === 'accepted' && (
           <Button
             size="sm"
-            onClick={() => handleStatusUpdate(order.id, 'processing')}
+            onClick={() => handleStatusUpdate(orderId, 'processing')}
             disabled={isLoading}
             className="gap-1.5"
           >
@@ -254,7 +212,7 @@ export default function StoreOrdersPage() {
           <Button
             size="sm"
             variant="success"
-            onClick={() => handleStatusUpdate(order.id, 'ready')}
+            onClick={() => handleStatusUpdate(orderId, 'ready')}
             disabled={isLoading}
             className="gap-1.5"
           >
@@ -268,7 +226,6 @@ export default function StoreOrdersPage() {
             size="sm"
             variant="success"
             onClick={() => {
-              setOtpDigits(['', '', '', '', '', ''])
               setOtpDialog({ open: true, order })
             }}
             disabled={isLoading}
@@ -282,7 +239,7 @@ export default function StoreOrdersPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => navigate(`/store/orders/${order.id}`)}
+          onClick={() => navigate(`/store/orders/${orderId}`)}
           className="gap-1.5"
         >
           <Eye className="h-3.5 w-3.5" />
@@ -305,6 +262,8 @@ export default function StoreOrdersPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <DesktopHint />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -351,14 +310,18 @@ export default function StoreOrdersPage() {
           setHasNewOrders(false)
         }}
       >
-        <TabsList className="w-full flex overflow-x-auto">
+        <TabsList className="w-full justify-start overflow-x-auto">
           {STATUS_TABS.map((tab) => {
             const count =
               tab.value === 'all'
                 ? orders.length
                 : orders.filter((o) => o.status === tab.value).length
             return (
-              <TabsTrigger key={tab.value} value={tab.value} className="flex-1 gap-1.5">
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="shrink-0 gap-1.5"
+              >
                 {tab.label}
                 {count > 0 && (
                   <span className="ml-1 rounded-full bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
@@ -385,15 +348,29 @@ export default function StoreOrdersPage() {
               <div className="space-y-4">
                 {sortedOrders.map((order) => {
                   const items = order.items || []
+                  const orderId = order.id || order._id
+                  const customerRole = order.customer_role || order.customerRole
+                  const customerIdentity =
+                    customerRole === 'student'
+                      ? order.customer_register_number || order.customerRegisterNumber
+                      : customerRole === 'faculty'
+                      ? order.customer_employee_id || order.customerEmployeeId
+                      : null
+                  const customerIdentityLabel =
+                    customerRole === 'student'
+                      ? 'Register Number'
+                      : customerRole === 'faculty'
+                      ? 'Employee ID'
+                      : null
                   return (
-                    <Card key={order.id} className="overflow-hidden">
+                    <Card key={orderId} className="overflow-hidden">
                       <CardContent className="p-4 sm:p-5">
                         {/* Header row */}
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-base">
-                                #{order.order_number || order.id?.slice(0, 8)}
+                                #{order.order_number || orderId?.slice(0, 8)}
                               </span>
                               <StatusBadge status={order.status} />
                               <StatusBadge status={order.payment_status} />
@@ -419,6 +396,33 @@ export default function StoreOrdersPage() {
                             {order.customer_name || order.user_name || 'N/A'}
                           </span>
                         </p>
+                        {customerIdentityLabel && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {customerIdentityLabel}:{' '}
+                            <span className="font-medium text-foreground">
+                              {customerIdentity || 'N/A'}
+                            </span>
+                          </p>
+                        )}
+
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="rounded-md border bg-muted/30 px-2.5 py-2">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                              Payment Ref
+                            </p>
+                            <p className="text-xs font-semibold break-all">
+                              {order.paymentReference || order.payment_reference || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="rounded-md border bg-muted/30 px-2.5 py-2">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                              Transaction ID
+                            </p>
+                            <p className="text-xs font-semibold break-all font-mono">
+                              {order.transactionId || order.transaction_id || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
 
                         {/* Items list */}
                         {items.length > 0 && (
@@ -493,7 +497,7 @@ export default function StoreOrdersPage() {
           <DialogHeader>
             <DialogTitle>Confirm Payment</DialogTitle>
             <DialogDescription>
-              Order #{paymentDialog.order?.order_number || paymentDialog.order?.id?.slice(0, 8)}
+              Order #{paymentDialog.order?.order_number || (paymentDialog.order?.id || paymentDialog.order?._id)?.slice(0, 8)}
               {' - '}
               {formatCurrency(paymentDialog.order?.total_amount || 0)}
             </DialogDescription>
@@ -509,6 +513,12 @@ export default function StoreOrdersPage() {
                 value={transactionId}
                 onChange={(e) => setTransactionId(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Payment Reference:{' '}
+                <span className="font-medium">
+                  {paymentDialog.order?.paymentReference || paymentDialog.order?.payment_reference || 'N/A'}
+                </span>
+              </p>
             </div>
           </div>
 
@@ -546,7 +556,6 @@ export default function StoreOrdersPage() {
         onOpenChange={(open) => {
           if (!open) {
             setOtpDialog({ open: false, order: null })
-            setOtpDigits(['', '', '', '', '', ''])
           }
         }}
       >
@@ -554,7 +563,7 @@ export default function StoreOrdersPage() {
           <DialogHeader>
             <DialogTitle>Verify Pickup OTP</DialogTitle>
             <DialogDescription>
-              Order #{otpDialog.order?.order_number || otpDialog.order?.id?.slice(0, 8)}
+              Order #{otpDialog.order?.order_number || (otpDialog.order?.id || otpDialog.order?._id)?.slice(0, 8)}
               {' - '}
               Ask the customer for their 6-digit pickup code.
             </DialogDescription>
@@ -572,32 +581,19 @@ export default function StoreOrdersPage() {
             </div>
           )}
 
-          <div className="space-y-4 py-2">
-            <Label>Enter Customer's OTP</Label>
-            <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
-              {otpDigits.map((digit, idx) => (
-                <Input
-                  key={idx}
-                  ref={(el) => {
-                    otpRefs.current[idx] = el
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  className="w-12 h-14 text-center text-xl font-bold"
-                  autoFocus={idx === 0}
-                />
-              ))}
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Ask the student/faculty to show or say the OTP, then confirm pickup.
+            </p>
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              No typing required. This will mark the order as picked up immediately.
             </div>
           </div>
 
           <DialogFooter>
             <Button
               onClick={handleOtpVerify}
-              disabled={otpLoading || otpDigits.join('').length !== 6}
+              disabled={otpLoading}
               className="w-full gap-2"
             >
               {otpLoading ? (
@@ -605,7 +601,7 @@ export default function StoreOrdersPage() {
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
-              Verify & Complete
+              Confirm OTP Checked & Complete
             </Button>
           </DialogFooter>
         </DialogContent>

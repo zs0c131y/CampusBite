@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
+import { DesktopHint } from '@/components/shared/DesktopHint'
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,6 @@ import {
 } from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const ORDER_TIMELINE = [
@@ -45,7 +45,6 @@ const STATUS_ORDER = ['placed', 'accepted', 'processing', 'ready', 'picked_up']
 
 export default function OrderDetailPage() {
   const { id } = useParams()
-  const { user } = useAuth()
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -215,9 +214,29 @@ export default function OrderDetailPage() {
   const items = order.items || []
   const isPaid = order.payment_status === 'success'
   const isTerminal = order.status === 'picked_up' || order.status === 'cancelled'
+  const customerRole = order.customer_role || order.customerRole || null
+  const customerIdentityLabel =
+    customerRole === 'student'
+      ? 'Register Number'
+      : customerRole === 'faculty'
+      ? 'Employee ID'
+      : null
+  const customerIdentityValue =
+    customerRole === 'student'
+      ? order.customer_register_number || order.customerRegisterNumber
+      : customerRole === 'faculty'
+      ? order.customer_employee_id || order.customerEmployeeId
+      : null
+  const currentTimelineIdx = STATUS_ORDER.indexOf(order.status)
+  const timelineProgressPercent =
+    order.status === 'cancelled' || currentTimelineIdx < 0
+      ? 0
+      : (currentTimelineIdx / (STATUS_ORDER.length - 1)) * 80
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <DesktopHint />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
@@ -244,55 +263,84 @@ export default function OrderDetailPage() {
           <CardTitle className="text-base">Order Timeline</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between relative">
-            {/* Progress bar background */}
-            <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted" />
-            {/* Progress bar fill */}
-            {(() => {
-              const currentIdx = STATUS_ORDER.indexOf(order.status)
-              const widthPercent =
-                order.status === 'cancelled'
-                  ? 0
-                  : (currentIdx / (STATUS_ORDER.length - 1)) * 100
-              return (
-                <div
-                  className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500"
-                  style={{ width: `${widthPercent}%` }}
-                />
-              )
-            })()}
-
-            {ORDER_TIMELINE.map((step) => {
+          <div className="space-y-4 sm:hidden">
+            {ORDER_TIMELINE.map((step, index) => {
               const state = getStepState(step.status)
               const Icon = step.icon
+              const showLine = index < ORDER_TIMELINE.length - 1
+
               return (
-                <div
-                  key={step.status}
-                  className="relative flex flex-col items-center z-10"
-                >
+                <div key={step.status} className="relative flex items-start gap-3">
+                  {showLine && (
+                    <div className="absolute left-4 top-8 h-8 w-0.5 bg-muted" />
+                  )}
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    className={`z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
                       state === 'completed'
-                        ? 'bg-primary border-primary text-primary-foreground'
+                        ? 'border-primary bg-primary text-primary-foreground'
                         : state === 'current'
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : 'bg-background border-muted-foreground/30 text-muted-foreground/50'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-muted-foreground/30 bg-background text-muted-foreground/50'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                   </div>
-                  <span
-                    className={`text-[10px] sm:text-xs mt-1.5 text-center max-w-[60px] sm:max-w-none ${
-                      state === 'upcoming'
-                        ? 'text-muted-foreground/50'
-                        : 'text-foreground font-medium'
-                    }`}
-                  >
-                    {step.label}
-                  </span>
+                  <div>
+                    <p
+                      className={`text-sm ${
+                        state === 'upcoming'
+                          ? 'text-muted-foreground/70'
+                          : 'font-medium text-foreground'
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+                  </div>
                 </div>
               )
             })}
+          </div>
+
+          <div className="relative hidden sm:block">
+            <div className="absolute left-[10%] right-[10%] top-5 h-0.5 bg-muted" />
+            <div
+              className="absolute left-[10%] top-5 h-0.5 bg-primary transition-all duration-500"
+              style={{ width: `${timelineProgressPercent}%` }}
+            />
+
+            <div className="grid grid-cols-5">
+              {ORDER_TIMELINE.map((step) => {
+                const state = getStepState(step.status)
+                const Icon = step.icon
+                return (
+                  <div
+                    key={step.status}
+                    className="relative z-10 flex flex-col items-center px-1"
+                  >
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+                        state === 'completed'
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : state === 'current'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-muted-foreground/30 bg-background text-muted-foreground/50'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span
+                      className={`mt-1.5 min-h-8 text-center text-[11px] leading-tight ${
+                        state === 'upcoming'
+                          ? 'text-muted-foreground/60'
+                          : 'font-medium text-foreground'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {order.status === 'cancelled' && (
@@ -351,6 +399,15 @@ export default function OrderDetailPage() {
                 </span>
               </div>
             )}
+            {customerIdentityLabel && (
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  <span className="text-muted-foreground">{customerIdentityLabel}: </span>
+                  <span className="font-medium">{customerIdentityValue || 'N/A'}</span>
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -360,6 +417,12 @@ export default function OrderDetailPage() {
             <CardTitle className="text-base">Payment Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Payment Ref</span>
+              <span className="text-sm font-semibold break-all ml-3 text-right">
+                {order.paymentReference || order.payment_reference || 'N/A'}
+              </span>
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
               <StatusBadge status={order.payment_status} />
@@ -373,7 +436,7 @@ export default function OrderDetailPage() {
             {order.transaction_id && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Transaction ID</span>
-                <span className="text-sm font-mono">{order.transaction_id}</span>
+                <span className="text-sm font-mono break-all ml-3 text-right">{order.transaction_id}</span>
               </div>
             )}
             <Separator />
@@ -403,7 +466,7 @@ export default function OrderDetailPage() {
                 <div key={idx}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold leading-none">
                         {item.quantity}x
                       </span>
                       <div>

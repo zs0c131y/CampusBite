@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import {
+  createCheckoutSession,
   createOrder,
   getOrders,
   getOrderById,
@@ -12,6 +13,7 @@ import {
 
 const router = Router();
 
+router.post('/checkout-session', authenticate, createCheckoutSession);
 router.post('/', authenticate, createOrder);
 router.get('/', authenticate, getOrders);
 router.get('/:id', authenticate, getOrderById);

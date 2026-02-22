@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
+import { DesktopHint } from '@/components/shared/DesktopHint'
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,6 @@ export default function MenuManagementPage() {
   const { user } = useAuth()
 
   const [menuItems, setMenuItems] = useState([])
-  const [store, setStore] = useState(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -73,8 +73,8 @@ export default function MenuManagementPage() {
       )
 
       if (myStore) {
-        setStore(myStore)
-        const menuRes = await api.get(`/stores/${myStore.id}/menu`)
+        const storeId = myStore.id || myStore._id
+        const menuRes = await api.get(`/stores/${storeId}/menu`)
         setMenuItems(menuRes.data.data.menuItems || [])
       } else {
         toast.error('Store not found. Please contact support.')
@@ -172,14 +172,11 @@ export default function MenuManagementPage() {
       }
 
       if (formDialog.editing) {
-        await api.put(`/menu/${formDialog.editing.id}`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        const editingId = formDialog.editing.id || formDialog.editing._id
+        await api.put(`/menu/${editingId}`, fd)
         toast.success('Menu item updated successfully.')
       } else {
-        await api.post('/menu', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        await api.post('/menu', fd)
         toast.success('Menu item added successfully.')
       }
 
@@ -199,7 +196,8 @@ export default function MenuManagementPage() {
     if (!deleteDialog.item) return
     setDeleteLoading(true)
     try {
-      await api.delete(`/menu/${deleteDialog.item.id}`)
+      const itemId = deleteDialog.item.id || deleteDialog.item._id
+      await api.delete(`/menu/${itemId}`)
       toast.success('Menu item deleted successfully.')
       setDeleteDialog({ open: false, item: null })
       await fetchData()
@@ -212,9 +210,10 @@ export default function MenuManagementPage() {
 
   // Toggle availability
   const handleToggleAvailability = async (item) => {
-    setToggleLoading(item.id)
+    const itemId = item.id || item._id
+    setToggleLoading(itemId)
     try {
-      await api.patch(`/menu/${item.id}/availability`)
+      await api.patch(`/menu/${itemId}/availability`)
       toast.success(
         `${item.name} is now ${item.is_available ? 'unavailable' : 'available'}.`
       )
@@ -239,6 +238,8 @@ export default function MenuManagementPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <DesktopHint />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -302,16 +303,16 @@ export default function MenuManagementPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden">
+            <Card key={item.id || item._id} className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="flex">
+                <div className="flex items-stretch">
                   {/* Image */}
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 bg-muted">
+                  <div className="w-28 sm:w-32 flex-shrink-0 bg-muted overflow-hidden self-stretch min-h-28 sm:min-h-32">
                     {item.image_url ? (
                       <img
                         src={item.image_url}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-center"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -350,7 +351,7 @@ export default function MenuManagementPage() {
                         <Switch
                           checked={item.is_available}
                           onCheckedChange={() => handleToggleAvailability(item)}
-                          disabled={toggleLoading === item.id}
+                          disabled={toggleLoading === (item.id || item._id)}
                         />
                         <span className="text-xs text-muted-foreground">
                           {item.is_available ? 'Available' : 'Unavailable'}

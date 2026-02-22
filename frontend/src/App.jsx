@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Layout } from '@/components/layout/Layout'
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
@@ -11,6 +11,7 @@ import RegisterPage from '@/pages/auth/RegisterPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
+import ProfilePage from '@/pages/ProfilePage'
 
 // Student pages
 import StoresPage from '@/pages/student/StoresPage'
@@ -25,6 +26,7 @@ import StoreDashboardPage from '@/pages/store/StoreDashboardPage'
 import StoreOrdersPage from '@/pages/store/StoreOrdersPage'
 import MenuManagementPage from '@/pages/store/MenuManagementPage'
 import StoreSettingsPage from '@/pages/store/StoreSettingsPage'
+import OrderDetailPage from '@/pages/store/OrderDetailPage'
 
 function HomeRedirect() {
   const { user, isAuthenticated } = useAuth()
@@ -34,12 +36,26 @@ function HomeRedirect() {
 }
 
 function App() {
-  const { loading } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
+  const location = useLocation()
 
   if (loading) return <LoadingScreen />
 
+  const publicAuthRoutes = new Set([
+    '/login',
+    '/register',
+    '/forgot-password',
+  ])
+  const isAuthRoute =
+    publicAuthRoutes.has(location.pathname) ||
+    location.pathname.startsWith('/reset-password/') ||
+    location.pathname.startsWith('/verify-email/')
+  const isPublicLanding = location.pathname === '/' && !isAuthenticated
+  const hideNavbar = isAuthRoute || isPublicLanding
+  const fluid = hideNavbar
+
   return (
-    <Layout>
+    <Layout hideNavbar={hideNavbar} fluid={fluid}>
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomeRedirect />} />
@@ -48,6 +64,13 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+
+        {/* Common authenticated route */}
+        <Route path="/profile" element={
+          <ProtectedRoute roles={['student', 'faculty', 'store_employee']}>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
 
         {/* Student/Faculty routes */}
         <Route path="/stores" element={
@@ -90,6 +113,11 @@ function App() {
         <Route path="/store/orders" element={
           <ProtectedRoute roles={['store_employee']}>
             <StoreOrdersPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/store/orders/:id" element={
+          <ProtectedRoute roles={['store_employee']}>
+            <OrderDetailPage />
           </ProtectedRoute>
         } />
         <Route path="/store/menu" element={

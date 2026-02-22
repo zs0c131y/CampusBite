@@ -1,543 +1,693 @@
-import { query } from '../config/db.js';
-import generateOrderNumber from '../utils/generateOrderNumber.js';
-import { generateUpiLink, getUpiAppLinks } from '../services/paymentService.js';
-import { generateOtp, getOtpExpiry, validateOtp } from '../services/otpService.js';
-import { sendOrderConfirmation, sendOrderStatusUpdate, sendOtpEmail } from '../services/emailService.js';
+import mongoose from 'mongoose'
+import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
+import Order from '../models/Order.js'
+import Store from '../models/Store.js'
+import MenuItem from '../models/MenuItem.js'
+import generateOrderNumber from '../utils/generateOrderNumber.js'
+import { formatOrder } from '../utils/formatters.js'
+import { generateUpiLink, getUpiAppLinks } from '../services/paymentService.js'
+import { generateOtp, getOtpExpiry, validateOtp } from '../services/otpService.js'
+import {
+  sendOrderStatusUpdate,
+  sendOtpEmail,
+} from '../services/emailService.js'
 
-export const createOrder = async (req, res, next) => {
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id)
+const CHECKOUT_TOKEN_EXPIRY_SECONDS = 15 * 60
+const CHECKOUT_TOKEN_SECRET = process.env.CHECKOUT_TOKEN_SECRET || process.env.JWT_SECRET
+const TRANSACTION_ID_REGEX = /^[A-Za-z0-9]{8,40}$/
+
+const generatePaymentReference = () =>
+  `CBPAY-${crypto.randomBytes(5).toString('hex').toUpperCase()}`
+
+const generateUniquePaymentReference = async () => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = generatePaymentReference()
+    const existing = await Order.exists({ payment_reference: candidate })
+    if (!existing) return candidate
+  }
+  throw new Error('Unable to generate payment reference. Please retry.')
+}
+
+const parseStatuses = (status) => {
+  if (!status) return null
+  const statuses = status
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return statuses.length > 0 ? statuses : null
+}
+
+const buildOrderDraft = async ({ items, storeId, specialInstructions }) => {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    const error = new Error('Order must contain at least one item.')
+    error.statusCode = 400
+    throw error
+  }
+
+  if (!storeId || !isValidObjectId(storeId)) {
+    const error = new Error('Valid store ID is required.')
+    error.statusCode = 400
+    throw error
+  }
+
+  const normalizedItems = items.map((item) => ({
+    menuItemId: item.menuItemId || item.id,
+    quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+  }))
+
+  if (normalizedItems.some((item) => !isValidObjectId(item.menuItemId))) {
+    const error = new Error('One or more menu item IDs are invalid.')
+    error.statusCode = 400
+    throw error
+  }
+
+  const store = await Store.findById(storeId)
+
+  if (!store) {
+    const error = new Error('Store not found.')
+    error.statusCode = 404
+    throw error
+  }
+
+  if (!store.is_active) {
+    const error = new Error('This store is currently not accepting orders.')
+    error.statusCode = 400
+    throw error
+  }
+
+  const uniqueItemIds = [...new Set(normalizedItems.map((item) => item.menuItemId))]
+  const menuItems = await MenuItem.find({ _id: { $in: uniqueItemIds } })
+  if (menuItems.length !== uniqueItemIds.length) {
+    const error = new Error('One or more items not found.')
+    error.statusCode = 400
+    throw error
+  }
+
+  const menuItemMap = new Map(menuItems.map((menuItem) => [menuItem._id.toString(), menuItem]))
+
+  let totalAmount = 0
+  const orderItems = []
+
+  for (const item of normalizedItems) {
+    const menuItem = menuItemMap.get(item.menuItemId)
+
+    if (!menuItem) {
+      const error = new Error('One or more items not found.')
+      error.statusCode = 400
+      throw error
+    }
+
+    if (menuItem.store_id.toString() !== storeId.toString()) {
+      const error = new Error(`Item "${menuItem.name}" does not belong to this store.`)
+      error.statusCode = 400
+      throw error
+    }
+
+    if (!menuItem.is_available) {
+      const error = new Error(`Item "${menuItem.name}" is currently unavailable.`)
+      error.statusCode = 400
+      throw error
+    }
+
+    const lineTotal = Number(menuItem.price) * item.quantity
+    totalAmount += lineTotal
+
+    orderItems.push({
+      menuItemId: menuItem._id,
+      name: menuItem.name,
+      price: Number(menuItem.price),
+      quantity: item.quantity,
+      total: lineTotal,
+    })
+  }
+
+  totalAmount = Math.round(totalAmount * 100) / 100
+
+  return {
+    store,
+    normalizedItems,
+    orderItems,
+    totalAmount,
+    specialInstructions: specialInstructions?.trim() || null,
+  }
+}
+
+export const createCheckoutSession = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const { items, storeId, specialInstructions } = req.body;
+    const userId = req.user.id
+    const { items, storeId, specialInstructions } = req.body
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Order must contain at least one item.',
-      });
-    }
+    const draft = await buildOrderDraft({ items, storeId, specialInstructions })
+    const paymentReference = await generateUniquePaymentReference()
+    const checkoutToken = jwt.sign(
+      {
+        userId,
+        storeId: draft.store._id.toString(),
+        items: draft.normalizedItems,
+        specialInstructions: draft.specialInstructions,
+        totalAmount: draft.totalAmount,
+        paymentReference,
+      },
+      CHECKOUT_TOKEN_SECRET,
+      { expiresIn: CHECKOUT_TOKEN_EXPIRY_SECONDS }
+    )
 
-    if (!storeId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Store ID is required.',
-      });
-    }
+    const upiLink = generateUpiLink(
+      draft.store.upi_id,
+      draft.store.name,
+      draft.totalAmount,
+      paymentReference
+    )
+    const upiAppLinks = getUpiAppLinks(upiLink)
 
-    const storeResult = await query(
-      'SELECT id, name, upi_id, is_active FROM stores WHERE id = $1',
-      [storeId]
-    );
-
-    if (storeResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Store not found.',
-      });
-    }
-
-    const store = storeResult.rows[0];
-
-    if (!store.is_active) {
-      return res.status(400).json({
-        success: false,
-        message: 'This store is currently not accepting orders.',
-      });
-    }
-
-    const itemIds = items.map((item) => item.menuItemId);
-    const placeholders = itemIds.map((_, i) => `$${i + 1}`).join(', ');
-    const menuResult = await query(
-      `SELECT id, name, price, store_id, is_available FROM menu_items WHERE id IN (${placeholders})`,
-      itemIds
-    );
-
-    if (menuResult.rows.length !== itemIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'One or more items not found.',
-      });
-    }
-
-    const menuItemMap = {};
-    for (const row of menuResult.rows) {
-      if (row.store_id !== storeId) {
-        return res.status(400).json({
-          success: false,
-          message: `Item "${row.name}" does not belong to this store.`,
-        });
-      }
-      if (!row.is_available) {
-        return res.status(400).json({
-          success: false,
-          message: `Item "${row.name}" is currently unavailable.`,
-        });
-      }
-      menuItemMap[row.id] = row;
-    }
-
-    let totalAmount = 0;
-    const orderItems = items.map((item) => {
-      const menuItem = menuItemMap[item.menuItemId];
-      const quantity = parseInt(item.quantity, 10) || 1;
-      const itemTotal = parseFloat(menuItem.price) * quantity;
-      totalAmount += itemTotal;
-      return {
-        menuItemId: menuItem.id,
-        name: menuItem.name,
-        price: parseFloat(menuItem.price),
-        quantity,
-        total: itemTotal,
-      };
-    });
-
-    totalAmount = Math.round(totalAmount * 100) / 100;
-
-    const orderNumber = generateOrderNumber();
-
-    const orderResult = await query(
-      `INSERT INTO orders (order_number, user_id, store_id, items, total_amount, special_instructions)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [orderNumber, userId, storeId, JSON.stringify(orderItems), totalAmount, specialInstructions || null]
-    );
-
-    const order = orderResult.rows[0];
-
-    const upiLink = generateUpiLink(store.upi_id, store.name, totalAmount, orderNumber);
-    const upiAppLinks = getUpiAppLinks(upiLink);
-
-    try {
-      await sendOrderConfirmation(req.user.email, req.user.name, {
-        ...order,
-        items: orderItems,
-        store_name: store.name,
-      });
-    } catch (emailError) {
-      console.error('Failed to send order confirmation email:', emailError);
-    }
-
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Order placed successfully.',
+      message: 'Checkout initiated. Complete payment to place your order.',
       data: {
-        order,
+        checkoutToken,
+        paymentReference,
+        expiresInSeconds: CHECKOUT_TOKEN_EXPIRY_SECONDS,
+        store: {
+          id: draft.store._id.toString(),
+          name: draft.store.name,
+          upiId: draft.store.upi_id,
+        },
+        items: draft.orderItems,
+        totalAmount: draft.totalAmount,
+        specialInstructions: draft.specialInstructions,
         payment: {
           upiLink,
           upiAppLinks,
-          amount: totalAmount,
-          storeName: store.name,
-          storeUpiId: store.upi_id,
+          amount: draft.totalAmount,
+          storeName: draft.store.name,
+          storeUpiId: draft.store.upi_id,
+          paymentReference,
         },
       },
-    });
+    })
   } catch (error) {
-    next(error);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      })
+    }
+    next(error)
   }
-};
+}
+
+export const createOrder = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const { checkoutToken, transactionId } = req.body
+
+    if (!checkoutToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Checkout token is required.',
+      })
+    }
+
+    const normalizedTransactionId = (transactionId || '').trim().toUpperCase()
+    if (!TRANSACTION_ID_REGEX.test(normalizedTransactionId)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Valid UPI transaction ID is required (8-40 alphanumeric characters).',
+      })
+    }
+
+    let checkoutData
+    try {
+      checkoutData = jwt.verify(checkoutToken, CHECKOUT_TOKEN_SECRET)
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: 'Checkout session expired or invalid. Please retry payment.',
+      })
+    }
+
+    if (checkoutData.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid checkout session for this user.',
+      })
+    }
+
+    const existingOrder = await Order.findOne({
+      payment_reference: checkoutData.paymentReference,
+    })
+      .populate('store_id')
+      .lean()
+
+    if (existingOrder) {
+      return res.json({
+        success: true,
+        message: 'Order already placed for this payment reference.',
+        data: formatOrder(existingOrder, { store: existingOrder.store_id }),
+      })
+    }
+
+    const duplicateTransactionOrder = await Order.findOne({
+      transaction_id: normalizedTransactionId,
+    }).lean()
+    if (duplicateTransactionOrder) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'This transaction ID is already linked to another order. Please check the ID and try again.',
+      })
+    }
+
+    const draft = await buildOrderDraft({
+      items: checkoutData.items || [],
+      storeId: checkoutData.storeId,
+      specialInstructions: checkoutData.specialInstructions,
+    })
+
+    if (Math.abs(draft.totalAmount - Number(checkoutData.totalAmount || 0)) > 0.01) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'Cart details changed during payment. Please retry checkout with updated cart.',
+      })
+    }
+
+    const order = await Order.create({
+      order_number: generateOrderNumber(),
+      payment_reference: checkoutData.paymentReference,
+      user_id: userId,
+      store_id: draft.store._id,
+      items: draft.orderItems,
+      total_amount: draft.totalAmount,
+      payment_status: 'pending',
+      transaction_id: normalizedTransactionId,
+      special_instructions: draft.specialInstructions,
+    })
+
+    res.status(201).json({
+      success: true,
+      message:
+        'Payment submitted and order placed. Awaiting store-side verification.',
+      data: {
+        ...formatOrder(order, { store: draft.store }),
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 
 export const getOrders = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const role = req.user.role;
-    const { status, page = 1, limit = 10 } = req.query;
+    const userId = req.user.id
+    const role = req.user.role
+    const { status, page = 1, limit = 10 } = req.query
 
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
-    const offset = (pageNum - 1) * limitNum;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1)
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10)
+    const skip = (pageNum - 1) * limitNum
 
-    let sql;
-    let countSql;
-    const params = [];
-    let paramIndex = 1;
+    const filter = {}
 
     if (role === 'store_employee') {
-      const storeResult = await query('SELECT id FROM stores WHERE owner_id = $1', [userId]);
-      if (storeResult.rows.length === 0) {
+      const store = await Store.findOne({ owner_id: userId }).lean()
+
+      if (!store) {
         return res.status(404).json({
           success: false,
           message: 'You do not own a store.',
-        });
+        })
       }
-      const storeId = storeResult.rows[0].id;
 
-      sql = `SELECT o.*, u.name AS customer_name, u.email AS customer_email
-             FROM orders o
-             JOIN users u ON o.user_id = u.id
-             WHERE o.store_id = $${paramIndex}`;
-      countSql = `SELECT COUNT(*) FROM orders WHERE store_id = $${paramIndex}`;
-      params.push(storeId);
-      paramIndex++;
+      filter.store_id = store._id
     } else {
-      sql = `SELECT o.*, s.name AS store_name
-             FROM orders o
-             JOIN stores s ON o.store_id = s.id
-             WHERE o.user_id = $${paramIndex}`;
-      countSql = `SELECT COUNT(*) FROM orders WHERE user_id = $${paramIndex}`;
-      params.push(userId);
-      paramIndex++;
+      filter.user_id = userId
     }
 
-    if (status) {
-      sql += ` AND o.order_status = $${paramIndex}`;
-      countSql += ` AND order_status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
+    const statuses = parseStatuses(status)
+    if (statuses) {
+      filter.order_status = statuses.length === 1 ? statuses[0] : { $in: statuses }
     }
 
-    const countResult = await query(countSql, params);
-    const totalCount = parseInt(countResult.rows[0].count, 10);
+    const total = await Order.countDocuments(filter)
 
-    sql += ` ORDER BY o.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limitNum, offset);
+    const orders = await Order.find(filter)
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate(role === 'store_employee' ? 'user_id' : 'store_id')
 
-    const result = await query(sql, params);
+    const formatted = orders.map((order) =>
+      role === 'store_employee'
+        ? formatOrder(order, { customer: order.user_id })
+        : formatOrder(order, { store: order.store_id })
+    )
 
     res.json({
       success: true,
-      data: {
-        orders: result.rows,
-        pagination: {
-          total: totalCount,
-          page: pageNum,
-          limit: limitNum,
-          totalPages: Math.ceil(totalCount / limitNum),
-        },
+      data: formatted,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
-    });
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const getOrderById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const role = req.user.role;
+    const { id } = req.params
+    const userId = req.user.id
+    const role = req.user.role
 
-    const result = await query(
-      `SELECT o.*, s.name AS store_name, s.upi_id AS store_upi_id, u.name AS customer_name, u.email AS customer_email
-       FROM orders o
-       JOIN stores s ON o.store_id = s.id
-       JOIN users u ON o.user_id = u.id
-       WHERE o.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
+    if (!isValidObjectId(id)) {
       return res.status(404).json({
         success: false,
         message: 'Order not found.',
-      });
+      })
     }
 
-    const order = result.rows[0];
+    const order = await Order.findById(id)
+      .populate('store_id')
+      .populate('user_id', 'name email phone_number role register_number employee_id')
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found.',
+      })
+    }
 
     if (role === 'store_employee') {
-      const storeResult = await query('SELECT id FROM stores WHERE owner_id = $1', [userId]);
-      if (storeResult.rows.length === 0 || storeResult.rows[0].id !== order.store_id) {
+      const ownerStore = await Store.findOne({ owner_id: userId }).lean()
+      if (!ownerStore || ownerStore._id.toString() !== order.store_id._id.toString()) {
         return res.status(403).json({
           success: false,
           message: 'You are not authorized to view this order.',
-        });
+        })
       }
-    } else if (order.user_id !== userId) {
+    } else if (order.user_id._id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to view this order.',
-      });
+      })
     }
 
     res.json({
       success: true,
-      data: { order },
-    });
+      data: formatOrder(order, { store: order.store_id, customer: order.user_id }),
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const updatePaymentStatus = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const { paymentStatus, transactionId } = req.body;
+    const { id } = req.params
+    const userId = req.user.id
+    const { paymentStatus, transactionId } = req.body
 
     if (!paymentStatus || !['pending', 'success', 'failed'].includes(paymentStatus)) {
       return res.status(400).json({
         success: false,
         message: 'Valid payment status is required (pending, success, failed).',
-      });
+      })
     }
 
-    const orderResult = await query(
-      `SELECT o.*, s.owner_id
-       FROM orders o
-       JOIN stores s ON o.store_id = s.id
-       WHERE o.id = $1`,
-      [id]
-    );
+    const order = await Order.findById(id).populate('store_id').populate('user_id', 'name email')
 
-    if (orderResult.rows.length === 0) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found.',
-      });
+      })
     }
 
-    const order = orderResult.rows[0];
-
-    if (order.owner_id !== userId) {
+    if (order.store_id.owner_id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to update this order.',
-      });
+      })
     }
 
-    let orderStatus = order.order_status;
+    const normalizedTransactionId = transactionId?.trim().toUpperCase()
+    if (normalizedTransactionId) {
+      const duplicateTransactionOrder = await Order.findOne({
+        transaction_id: normalizedTransactionId,
+        _id: { $ne: order._id },
+      }).lean()
+
+      if (duplicateTransactionOrder) {
+        return res.status(409).json({
+          success: false,
+          message:
+            'This transaction ID is already linked to another order.',
+        })
+      }
+
+      order.transaction_id = normalizedTransactionId
+    }
+
+    if (paymentStatus === 'success' && !order.transaction_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID is required to mark payment as successful.',
+      })
+    }
+
+    order.payment_status = paymentStatus
+
     if (paymentStatus === 'success' && order.order_status === 'placed') {
-      orderStatus = 'accepted';
+      order.order_status = 'accepted'
+    }
+    if (paymentStatus === 'failed') {
+      order.order_status = 'cancelled'
     }
 
-    const result = await query(
-      `UPDATE orders
-       SET payment_status = $1, transaction_id = $2, order_status = $3, updated_at = NOW()
-       WHERE id = $4
-       RETURNING *`,
-      [paymentStatus, transactionId || order.transaction_id, orderStatus, id]
-    );
+    await order.save()
 
     if (paymentStatus === 'success') {
       try {
-        const customerResult = await query('SELECT name, email FROM users WHERE id = $1', [order.user_id]);
-        if (customerResult.rows.length > 0) {
-          const customer = customerResult.rows[0];
-          await sendOrderStatusUpdate(customer.email, customer.name, result.rows[0], 'accepted');
-        }
+        await sendOrderStatusUpdate(
+          order.user_id.email,
+          order.user_id.name,
+          formatOrder(order),
+          'accepted'
+        )
       } catch (emailError) {
-        console.error('Failed to send order status update email:', emailError);
+        console.error('Failed to send order status update email:', emailError)
       }
     }
 
     res.json({
       success: true,
       message: 'Payment status updated successfully.',
-      data: { order: result.rows[0] },
-    });
+      data: { order: formatOrder(order, { store: order.store_id, customer: order.user_id }) },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const updateOrderStatus = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const { status } = req.body;
+    const { id } = req.params
+    const userId = req.user.id
+    const { status } = req.body
 
     const validTransitions = {
+      placed: ['accepted'],
       accepted: ['processing'],
       processing: ['ready'],
       ready: ['picked_up'],
-    };
+    }
 
-    const orderResult = await query(
-      `SELECT o.*, s.owner_id
-       FROM orders o
-       JOIN stores s ON o.store_id = s.id
-       WHERE o.id = $1`,
-      [id]
-    );
+    const order = await Order.findById(id).populate('store_id').populate('user_id', 'name email')
 
-    if (orderResult.rows.length === 0) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found.',
-      });
+      })
     }
 
-    const order = orderResult.rows[0];
-
-    if (order.owner_id !== userId) {
+    if (order.store_id.owner_id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to update this order.',
-      });
+      })
     }
 
-    const allowedNextStatuses = validTransitions[order.order_status];
+    if (order.payment_status !== 'success') {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Order status cannot be updated until payment is verified as successful.',
+      })
+    }
+
+    const allowedNextStatuses = validTransitions[order.order_status]
     if (!allowedNextStatuses || !allowedNextStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot transition from "${order.order_status}" to "${status}".`,
-      });
+      })
     }
 
     if (status === 'picked_up' && !order.is_otp_verified) {
       return res.status(400).json({
         success: false,
         message: 'OTP must be verified before marking as picked up.',
-      });
+      })
     }
 
-    let otp = null;
-    let otpExpiresAt = null;
-
+    let generatedOtp = null
     if (status === 'ready') {
-      otp = generateOtp();
-      otpExpiresAt = getOtpExpiry();
+      generatedOtp = generateOtp()
+      order.otp = generatedOtp
+      order.otp_expires_at = getOtpExpiry()
+      order.is_otp_verified = false
     }
 
-    const updateFields = ['order_status = $1', 'updated_at = NOW()'];
-    const updateParams = [status];
-    let paramIndex = 2;
+    order.order_status = status
+    await order.save()
 
-    if (otp) {
-      updateFields.push(`otp = $${paramIndex}`);
-      updateParams.push(otp);
-      paramIndex++;
-      updateFields.push(`otp_expires_at = $${paramIndex}`);
-      updateParams.push(otpExpiresAt);
-      paramIndex++;
-    }
+    try {
+      await sendOrderStatusUpdate(
+        order.user_id.email,
+        order.user_id.name,
+        formatOrder(order),
+        status
+      )
 
-    updateParams.push(id);
-    const result = await query(
-      `UPDATE orders SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      updateParams
-    );
-
-    const customerResult = await query('SELECT name, email FROM users WHERE id = $1', [order.user_id]);
-
-    if (customerResult.rows.length > 0) {
-      const customer = customerResult.rows[0];
-      try {
-        await sendOrderStatusUpdate(customer.email, customer.name, result.rows[0], status);
-
-        if (status === 'ready' && otp) {
-          await sendOtpEmail(customer.email, customer.name, otp, order.order_number);
-        }
-      } catch (emailError) {
-        console.error('Failed to send email:', emailError);
+      if (status === 'ready' && generatedOtp) {
+        await sendOtpEmail(
+          order.user_id.email,
+          order.user_id.name,
+          generatedOtp,
+          order.order_number
+        )
       }
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError)
     }
 
-    const responseData = { order: result.rows[0] };
-    if (status === 'ready' && otp) {
-      responseData.otp = otp;
+    const responseData = {
+      order: formatOrder(order, { store: order.store_id, customer: order.user_id }),
+    }
+
+    if (generatedOtp) {
+      responseData.otp = generatedOtp
     }
 
     res.json({
       success: true,
       message: `Order status updated to "${status}".`,
       data: responseData,
-    });
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const verifyOrderOtp = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const { otp } = req.body;
+    const { id } = req.params
+    const userId = req.user.id
+    const { otp, manualConfirm } = req.body
 
-    if (!otp) {
+    if (!otp && manualConfirm !== true) {
       return res.status(400).json({
         success: false,
-        message: 'OTP is required.',
-      });
+        message: 'Provide OTP or confirm manual OTP verification.',
+      })
     }
 
-    const orderResult = await query(
-      `SELECT o.*, s.owner_id
-       FROM orders o
-       JOIN stores s ON o.store_id = s.id
-       WHERE o.id = $1`,
-      [id]
-    );
+    const order = await Order.findById(id).populate('store_id').populate('user_id', 'name email')
 
-    if (orderResult.rows.length === 0) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found.',
-      });
+      })
     }
 
-    const order = orderResult.rows[0];
-
-    if (order.owner_id !== userId) {
+    if (order.store_id.owner_id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to verify OTP for this order.',
-      });
+      })
     }
 
     if (order.order_status !== 'ready') {
       return res.status(400).json({
         success: false,
         message: 'OTP can only be verified when order status is "ready".',
-      });
+      })
     }
 
-    const isValid = validateOtp(order.otp, otp, order.otp_expires_at);
+    if (otp) {
+      const isValid = validateOtp(order.otp, otp, order.otp_expires_at)
 
-    if (!isValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired OTP.',
-      });
+      if (!isValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired OTP.',
+        })
+      }
     }
 
-    const result = await query(
-      `UPDATE orders SET is_otp_verified = true, order_status = 'picked_up', updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    order.is_otp_verified = true
+    order.order_status = 'picked_up'
+    await order.save()
 
     try {
-      const customerResult = await query('SELECT name, email FROM users WHERE id = $1', [order.user_id]);
-      if (customerResult.rows.length > 0) {
-        const customer = customerResult.rows[0];
-        await sendOrderStatusUpdate(customer.email, customer.name, result.rows[0], 'picked_up');
-      }
+      await sendOrderStatusUpdate(
+        order.user_id.email,
+        order.user_id.name,
+        formatOrder(order),
+        'picked_up'
+      )
     } catch (emailError) {
-      console.error('Failed to send pickup confirmation email:', emailError);
+      console.error('Failed to send pickup confirmation email:', emailError)
     }
 
     res.json({
       success: true,
       message: 'OTP verified. Order marked as picked up.',
-      data: { order: result.rows[0] },
-    });
+      data: { order: formatOrder(order, { store: order.store_id, customer: order.user_id }) },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const pollOrderStatus = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
-    const result = await query(
-      'SELECT id, order_number, payment_status, order_status, updated_at FROM orders WHERE id = $1',
-      [id]
-    );
+    const order = await Order.findById(id).lean()
 
-    if (result.rows.length === 0) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found.',
-      });
+      })
     }
 
     res.json({
       success: true,
-      data: result.rows[0],
-    });
+      data: formatOrder(order),
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}

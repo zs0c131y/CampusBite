@@ -17,6 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { DesktopHint } from '@/components/shared/DesktopHint'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -46,9 +47,10 @@ export default function StoreDashboardPage() {
 
         if (myStore) {
           setStore(myStore)
+          const storeId = myStore.id || myStore._id
 
           // Fetch menu items for this store
-          const menuRes = await api.get(`/stores/${myStore.id}/menu`)
+          const menuRes = await api.get(`/stores/${storeId}/menu`)
           setMenuItems(menuRes.data.data.menuItems || [])
         }
 
@@ -112,6 +114,8 @@ export default function StoreDashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      <DesktopHint />
+
       {/* Welcome Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -222,16 +226,17 @@ export default function StoreDashboardPage() {
                   const itemCount = order.items
                     ? order.items.length
                     : order.item_count || 0
+                  const orderId = order.id || order._id
 
                   return (
                     <div
-                      key={order.id}
+                      key={orderId}
                       className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm">
-                            #{order.order_number || order.id?.slice(0, 8)}
+                            #{order.order_number || orderId?.slice(0, 8)}
                           </span>
                           <StatusBadge status={order.status} />
                         </div>
@@ -254,7 +259,7 @@ export default function StoreDashboardPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => navigate(`/store/orders/${order.id}`)}
+                          onClick={() => navigate(`/store/orders/${orderId}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, ArrowLeft, Send } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
@@ -45,13 +44,13 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600 tracking-tight">CampusBite</h1>
+          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Reset your password</p>
         </div>
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">Forgot Password</CardTitle>
+            <CardTitle className="font-display text-2xl">Forgot Password</CardTitle>
             <CardDescription>
               {isSubmitted
                 ? 'Check your email inbox'

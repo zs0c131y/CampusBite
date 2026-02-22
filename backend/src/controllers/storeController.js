@@ -1,140 +1,158 @@
-import { query } from '../config/db.js';
+import Store from '../models/Store.js'
+import MenuItem from '../models/MenuItem.js'
+import { formatStore, formatMenuItem } from '../utils/formatters.js'
+
+const parseOperatingHours = (value) => {
+  if (!value) return undefined
+  if (typeof value === 'object') return value
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
 
 export const getAllStores = async (req, res, next) => {
   try {
-    const result = await query(
-      `SELECT s.*, u.name AS owner_name
-       FROM stores s
-       JOIN users u ON s.owner_id = u.id
-       WHERE s.is_active = true
-       ORDER BY s.created_at DESC`
-    );
+    const stores = await Store.find({ is_active: true })
+      .populate('owner_id', 'name')
+      .sort({ created_at: -1 })
+
+    const formatted = stores.map((store) =>
+      formatStore(store, { name: store.owner_id?.name })
+    )
 
     res.json({
       success: true,
-      data: { stores: result.rows },
-    });
+      data: { stores: formatted },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const getStoreById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
-    const result = await query(
-      `SELECT s.*, u.name AS owner_name, u.email AS owner_email, u.phone_number AS owner_phone
-       FROM stores s
-       JOIN users u ON s.owner_id = u.id
-       WHERE s.id = $1`,
-      [id]
-    );
+    const store = await Store.findById(id).populate(
+      'owner_id',
+      'name email phone_number'
+    )
 
-    if (result.rows.length === 0) {
+    if (!store) {
       return res.status(404).json({
         success: false,
         message: 'Store not found.',
-      });
+      })
     }
 
     res.json({
       success: true,
-      data: { store: result.rows[0] },
-    });
+      data: {
+        store: formatStore(store, {
+          name: store.owner_id?.name,
+          email: store.owner_id?.email,
+          phone_number: store.owner_id?.phone_number,
+        }),
+      },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const updateStore = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
+    const { id } = req.params
+    const userId = req.user.id
 
-    const storeResult = await query('SELECT * FROM stores WHERE id = $1', [id]);
+    const store = await Store.findById(id)
 
-    if (storeResult.rows.length === 0) {
+    if (!store) {
       return res.status(404).json({
         success: false,
         message: 'Store not found.',
-      });
+      })
     }
 
-    if (storeResult.rows[0].owner_id !== userId) {
+    if (store.owner_id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to update this store.',
-      });
+      })
     }
 
-    const { name, description, upi_id, is_active, operating_hours, image_url } = req.body;
-    const store = storeResult.rows[0];
+    const {
+      name,
+      description,
+      upi_id,
+      is_active,
+      operating_hours,
+      image_url,
+    } = req.body
 
-    const result = await query(
-      `UPDATE stores
-       SET name = $1, description = $2, upi_id = $3, is_active = $4, operating_hours = $5, image_url = $6, updated_at = NOW()
-       WHERE id = $7
-       RETURNING *`,
-      [
-        name || store.name,
-        description !== undefined ? description : store.description,
-        upi_id || store.upi_id,
-        is_active !== undefined ? is_active : store.is_active,
-        operating_hours ? JSON.stringify(operating_hours) : store.operating_hours,
-        image_url !== undefined ? image_url : store.image_url,
-        id,
-      ]
-    );
+    if (name) store.name = name
+    if (description !== undefined) store.description = description
+    if (upi_id) store.upi_id = upi_id
+    if (is_active !== undefined) store.is_active = is_active
+
+    const parsedHours = parseOperatingHours(operating_hours)
+    if (parsedHours !== undefined) {
+      store.operating_hours = parsedHours
+    }
+
+    if (req.file) {
+      store.image_url = `/uploads/${req.file.filename}`
+    } else if (image_url !== undefined) {
+      store.image_url = image_url
+    }
+
+    await store.save()
 
     res.json({
       success: true,
       message: 'Store updated successfully.',
-      data: { store: result.rows[0] },
-    });
+      data: { store: formatStore(store) },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
 export const getStoreMenu = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { category, search } = req.query;
+    const { id } = req.params
+    const { category, search } = req.query
 
-    const storeResult = await query('SELECT id FROM stores WHERE id = $1', [id]);
-    if (storeResult.rows.length === 0) {
+    const store = await Store.findById(id).lean()
+    if (!store) {
       return res.status(404).json({
         success: false,
         message: 'Store not found.',
-      });
+      })
     }
 
-    let sql = 'SELECT * FROM menu_items WHERE store_id = $1';
-    const params = [id];
-    let paramIndex = 2;
+    const filter = { store_id: id }
 
     if (category) {
-      sql += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
+      filter.category = category
     }
 
     if (search) {
-      sql += ` AND LOWER(name) LIKE $${paramIndex}`;
-      params.push(`%${search.toLowerCase()}%`);
-      paramIndex++;
+      filter.name = { $regex: search, $options: 'i' }
     }
 
-    sql += ' ORDER BY category, name';
-
-    const result = await query(sql, params);
+    const menuItems = await MenuItem.find(filter).sort({ category: 1, name: 1 })
 
     res.json({
       success: true,
-      data: { menuItems: result.rows },
-    });
+      data: { menuItems: menuItems.map(formatMenuItem) },
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}

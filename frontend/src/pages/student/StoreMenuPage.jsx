@@ -71,10 +71,15 @@ export default function StoreMenuPage() {
         api.get(`/stores/${storeId}/menu`),
       ])
       if (storeRes.data.success) {
-        setStore(storeRes.data.data)
+        setStore(storeRes.data.data?.store || storeRes.data.data || null)
       }
       if (menuRes.data.success) {
-        setMenuItems(menuRes.data.data || [])
+        const menuList = Array.isArray(menuRes.data.data)
+          ? menuRes.data.data
+          : Array.isArray(menuRes.data.data?.menuItems)
+            ? menuRes.data.data.menuItems
+            : []
+        setMenuItems(menuList)
       }
     } catch (error) {
       toast.error('Failed to load store menu. Please try again.')

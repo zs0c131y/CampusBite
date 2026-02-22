@@ -44,7 +44,12 @@ export default function StoresPage() {
     try {
       const { data } = await api.get('/stores')
       if (data.success) {
-        setStores(data.data || [])
+        const storesList = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data.data?.stores)
+            ? data.data.stores
+            : []
+        setStores(storesList)
       }
     } catch (error) {
       toast.error('Failed to load stores. Please try again.')

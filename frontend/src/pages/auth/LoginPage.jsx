@@ -77,7 +77,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600 tracking-tight">
+          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
             CampusBite
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">Welcome back</CardTitle>
+            <CardTitle className="font-display text-2xl">Welcome back</CardTitle>
             <CardDescription>Sign in to your account to continue</CardDescription>
           </CardHeader>
 

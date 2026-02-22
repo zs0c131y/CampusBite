@@ -35,17 +35,17 @@ export function Navbar() {
   const closeMobileMenu = () => setMobileMenuOpen(false)
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-border/70 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link
               to="/"
-              className="flex items-center space-x-2 text-xl font-bold text-primary"
+              className="group flex items-center space-x-2 text-xl font-bold text-primary"
             >
-              <ChefHat className="h-7 w-7" />
-              <span>CampusBite</span>
+              <ChefHat className="h-7 w-7 transition-transform duration-200 group-hover:-translate-y-0.5" />
+              <span className="font-display tracking-tight">CampusBite</span>
             </Link>
           </div>
 
@@ -93,6 +93,7 @@ export function Navbar() {
                     size="icon"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="relative"
+                    aria-label="Open account menu"
                   >
                     <User className="h-5 w-5" />
                   </Button>
@@ -111,9 +112,17 @@ export function Navbar() {
                             {user.email}
                           </p>
                         </div>
+                        <Link
+                          to="/profile"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg border-t border-gray-100"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           Logout
@@ -155,6 +164,7 @@ export function Navbar() {
                     size="icon"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="relative"
+                    aria-label="Open account menu"
                   >
                     <User className="h-5 w-5" />
                   </Button>
@@ -183,7 +193,7 @@ export function Navbar() {
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg border-t border-gray-100"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           Logout
@@ -212,6 +222,7 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {mobileMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -250,6 +261,14 @@ export function Navbar() {
                   <p className="text-sm font-medium text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
+                <Link
+                  to="/profile"
+                  onClick={closeMobileMenu}
+                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <User className="h-5 w-5 mr-3" />
+                  Profile
+                </Link>
                 <Link
                   to="/store/dashboard"
                   onClick={closeMobileMenu}
@@ -297,6 +316,14 @@ export function Navbar() {
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <Link
+                  to="/profile"
+                  onClick={closeMobileMenu}
+                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <User className="h-5 w-5 mr-3" />
+                  Profile
+                </Link>
+                <Link
                   to="/stores"
                   onClick={closeMobileMenu}
                   className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
@@ -324,14 +351,6 @@ export function Navbar() {
                       {itemCount}
                     </span>
                   )}
-                </Link>
-                <Link
-                  to="/profile"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <User className="h-5 w-5 mr-3" />
-                  Profile
                 </Link>
                 <button
                   onClick={handleLogout}

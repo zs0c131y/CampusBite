@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { PasswordRequirements } from '@/components/shared/PasswordRequirements'
 import api from '@/lib/api'
 import { validatePassword } from '@/lib/validators'
 
@@ -69,7 +70,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600 tracking-tight">CampusBite</h1>
+          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Set a new password</p>
         </div>
 
@@ -78,7 +79,7 @@ export default function ResetPasswordPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-3">
               <KeyRound className="h-6 w-6 text-orange-600" />
             </div>
-            <CardTitle className="text-xl">Reset Password</CardTitle>
+            <CardTitle className="font-display text-2xl">Reset Password</CardTitle>
             <CardDescription>
               Enter your new password below. It must be at least 8 characters with uppercase,
               lowercase, and a number.
@@ -116,6 +117,7 @@ export default function ResetPasswordPage() {
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password}</p>
                 )}
+                <PasswordRequirements password={formData.password} />
               </div>
 
               {/* Confirm Password */}

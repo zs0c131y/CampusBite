@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
+import { DesktopHint } from '@/components/shared/DesktopHint'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -49,8 +50,9 @@ export default function StoreSettingsPage() {
         )
 
         if (myStore) {
+          const storeId = myStore.id || myStore._id
           // Fetch full store details
-          const storeRes = await api.get(`/stores/${myStore.id}`)
+          const storeRes = await api.get(`/stores/${storeId}`)
           const storeData = storeRes.data.data.store || myStore
           setStore(storeData)
 
@@ -126,7 +128,7 @@ export default function StoreSettingsPage() {
         fd.append('image', imageFile)
 
         try {
-          const res = await api.put(`/stores/${store.id}`, fd, {
+          const res = await api.put(`/stores/${store.id || store._id}`, fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
           })
           setStore(res.data.data.store)
@@ -146,7 +148,7 @@ export default function StoreSettingsPage() {
         operating_hours: operatingHours,
       }
 
-      const res = await api.put(`/stores/${store.id}`, payload)
+      const res = await api.put(`/stores/${store.id || store._id}`, payload)
       setStore(res.data.data.store)
       toast.success('Store settings saved successfully.')
       setImageFile(null)
@@ -186,6 +188,8 @@ export default function StoreSettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <DesktopHint />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>

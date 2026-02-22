@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import api from '@/lib/api'
 
+const verificationResultCache = new Map()
+const verificationRequestCache = new Map()
+
 export default function VerifyEmailPage() {
   const { token } = useParams()
 
@@ -12,18 +15,55 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
+    let isMounted = true
+
     const verifyEmail = async () => {
       if (!token) {
+        if (!isMounted) return
         setStatus('error')
         setMessage('Invalid verification link. No token was provided.')
         return
       }
 
+      if (verificationResultCache.has(token)) {
+        const cached = verificationResultCache.get(token)
+        if (!isMounted) return
+        setStatus(cached.status)
+        setMessage(cached.message)
+        return
+      }
+
       try {
-        const { data } = await api.post(`/auth/verify-email/${token}`)
-        setStatus('success')
-        setMessage(data?.message || 'Your email has been verified successfully!')
+        let request = verificationRequestCache.get(token)
+
+        if (!request) {
+          request = api
+            .post(`/auth/verify-email/${token}`)
+            .then(({ data }) => ({
+              status: 'success',
+              message: data?.message || 'Your email has been verified successfully!',
+            }))
+            .catch((error) => ({
+              status: 'error',
+              message:
+                error.response?.data?.message ||
+                'Email verification failed. The link may have expired or is invalid.',
+            }))
+            .finally(() => {
+              verificationRequestCache.delete(token)
+            })
+
+          verificationRequestCache.set(token, request)
+        }
+
+        const result = await request
+        verificationResultCache.set(token, result)
+
+        if (!isMounted) return
+        setStatus(result.status)
+        setMessage(result.message)
       } catch (error) {
+        if (!isMounted) return
         setStatus('error')
         setMessage(
           error.response?.data?.message ||
@@ -33,6 +73,10 @@ export default function VerifyEmailPage() {
     }
 
     verifyEmail()
+
+    return () => {
+      isMounted = false
+    }
   }, [token])
 
   return (
@@ -40,13 +84,13 @@ export default function VerifyEmailPage() {
       <div className="w-full max-w-md">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600 tracking-tight">CampusBite</h1>
+          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
           <p className="text-muted-foreground mt-1 text-sm">Email Verification</p>
         </div>
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">Verify Your Email</CardTitle>
+            <CardTitle className="font-display text-2xl">Verify Your Email</CardTitle>
           </CardHeader>
 
           <CardContent>
