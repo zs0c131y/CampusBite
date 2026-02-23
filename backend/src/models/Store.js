@@ -9,6 +9,7 @@ const storeSchema = new mongoose.Schema(
     is_active: { type: Boolean, default: true },
     operating_hours: { type: mongoose.Schema.Types.Mixed, default: {} },
     image_url: { type: String, default: null },
+    qr_code_url: { type: String, default: null },
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

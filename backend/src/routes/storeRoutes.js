@@ -7,7 +7,16 @@ const router = Router();
 
 router.get('/', getAllStores);
 router.get('/:id', getStoreById);
-router.put('/:id', authenticate, authorize('store_employee'), upload.single('image'), updateStore);
+router.put(
+  '/:id',
+  authenticate,
+  authorize('store_employee'),
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'qr_code', maxCount: 1 },
+  ]),
+  updateStore
+);
 router.get('/:id/menu', getStoreMenu);
 
 export default router;

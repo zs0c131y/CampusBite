@@ -27,6 +27,7 @@ import {
 import api from '@/lib/api'
 import { useCart } from '@/contexts/CartContext'
 import { formatCurrency } from '@/lib/utils'
+import { resolveMediaUrl } from '@/lib/media'
 
 function MenuItemSkeleton() {
   return (
@@ -165,6 +166,7 @@ export default function StoreMenuPage() {
 
   const cartTotal = cart.getTotal()
   const cartItemCount = cart.getItemCount()
+  const storeImage = resolveMediaUrl(store?.imageUrl || store?.image_url || '')
 
   if (loading) {
     return (
@@ -221,10 +223,10 @@ export default function StoreMenuPage() {
 
         {/* Store Header */}
         <div className="mb-6 sm:mb-8 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.7)] backdrop-blur-sm sm:p-5">
-          {store.imageUrl ? (
+          {storeImage ? (
             <div className="h-40 sm:h-56 rounded-xl overflow-hidden mb-4">
               <img
-                src={store.imageUrl}
+                src={storeImage}
                 alt={store.name}
                 className="w-full h-full object-cover"
               />
@@ -301,6 +303,7 @@ export default function StoreMenuPage() {
               const itemId = item._id || item.id
               const quantity = getCartQuantity(itemId)
               const isUnavailable = item.isAvailable === false
+              const itemImage = resolveMediaUrl(item.imageUrl || item.image_url || '')
 
               return (
                 <Card
@@ -310,10 +313,10 @@ export default function StoreMenuPage() {
                   }`}
                 >
                   {/* Item Image */}
-                  {item.imageUrl ? (
+                  {itemImage ? (
                     <div className="h-36 overflow-hidden relative">
                       <img
-                        src={item.imageUrl}
+                        src={itemImage}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

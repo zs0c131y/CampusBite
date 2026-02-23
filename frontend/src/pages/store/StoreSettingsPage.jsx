@@ -5,6 +5,7 @@ import {
   Save,
   Store,
   ImageIcon,
+  QrCode,
   AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,6 +20,7 @@ import { DesktopHint } from '@/components/shared/DesktopHint'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { validateUpiId } from '@/lib/validators'
+import { resolveMediaUrl } from '@/lib/media'
 
 export default function StoreSettingsPage() {
   const { user } = useAuth()
@@ -37,6 +39,8 @@ export default function StoreSettingsPage() {
   })
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
+  const [qrFile, setQrFile] = useState(null)
+  const [qrPreview, setQrPreview] = useState(null)
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -76,7 +80,8 @@ export default function StoreSettingsPage() {
             opening_time: openTime,
             closing_time: closeTime,
           })
-          setImagePreview(storeData.image_url || null)
+          setImagePreview(resolveMediaUrl(storeData.image_url || storeData.imageUrl || ''))
+          setQrPreview(resolveMediaUrl(storeData.qr_code_url || storeData.qrCodeUrl || ''))
         } else {
           setError('Store not found. Please contact support.')
         }
@@ -99,6 +104,18 @@ export default function StoreSettingsPage() {
       }
       setImageFile(file)
       setImagePreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleQrChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('QR image size must be less than 5MB.')
+        return
+      }
+      setQrFile(file)
+      setQrPreview(URL.createObjectURL(file))
     }
   }
 
@@ -126,24 +143,28 @@ export default function StoreSettingsPage() {
         close: formData.closing_time,
       }
 
-      // If there is an image, try multipart upload first
-      if (imageFile) {
+      if (imageFile || qrFile) {
         const fd = new FormData()
         fd.append('name', formData.name.trim())
         fd.append('description', formData.description.trim())
         fd.append('upi_id', normalizedUpiId)
         fd.append('operating_hours', JSON.stringify(operatingHours))
-        fd.append('image', imageFile)
-
-        try {
-          const res = await api.put(`/stores/${store.id || store._id}`, fd)
-          setStore(res.data.data.store)
-          toast.success('Store settings saved successfully.')
-          setImageFile(null)
-          return
-        } catch {
-          // If multipart fails, fall through to JSON
+        if (imageFile) {
+          fd.append('image', imageFile)
         }
+        if (qrFile) {
+          fd.append('qr_code', qrFile)
+        }
+
+        const res = await api.put(`/stores/${store.id || store._id}`, fd)
+        const updatedStore = res.data.data.store
+        setStore(updatedStore)
+        setImagePreview(resolveMediaUrl(updatedStore.image_url || updatedStore.imageUrl || ''))
+        setQrPreview(resolveMediaUrl(updatedStore.qr_code_url || updatedStore.qrCodeUrl || ''))
+        setImageFile(null)
+        setQrFile(null)
+        toast.success('Store settings saved successfully.')
+        return
       }
 
       // JSON update (without image)
@@ -155,9 +176,13 @@ export default function StoreSettingsPage() {
       }
 
       const res = await api.put(`/stores/${store.id || store._id}`, payload)
-      setStore(res.data.data.store)
+      const updatedStore = res.data.data.store
+      setStore(updatedStore)
+      setImagePreview(resolveMediaUrl(updatedStore.image_url || updatedStore.imageUrl || ''))
+      setQrPreview(resolveMediaUrl(updatedStore.qr_code_url || updatedStore.qrCodeUrl || ''))
       toast.success('Store settings saved successfully.')
       setImageFile(null)
+      setQrFile(null)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save store settings.')
     } finally {
@@ -333,6 +358,37 @@ export default function StoreSettingsPage() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Max 5MB. JPG, PNG, or WebP recommended.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Store QR Code */}
+            <div className="space-y-3">
+              <Label>Store UPI QR Code</Label>
+              <div className="flex items-start gap-4">
+                {qrPreview ? (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border bg-white">
+                    <img
+                      src={qrPreview}
+                      alt="Store QR"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-lg border border-dashed flex items-center justify-center">
+                    <QrCode className="h-8 w-8 text-muted-foreground/40" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleQrChange}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Optional. Shown to students on checkout. Max 5MB.
                   </p>
                 </div>
               </div>

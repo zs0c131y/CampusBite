@@ -23,6 +23,7 @@ import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
 import { useCart } from '@/contexts/CartContext'
 import { formatCurrency, getTrustTierMeta } from '@/lib/utils'
+import { resolveMediaUrl } from '@/lib/media'
 
 const normalizeOrderItems = (items = []) =>
   items.map((item, idx) => ({
@@ -293,9 +294,13 @@ export default function CheckoutPage() {
     ? exactPayableAmount.toFixed(2)
     : ''
   const upiLink = paymentSession?.payment?.upiLink || ''
-  const qrUrl = upiLink
+  const uploadedStoreQr = resolveMediaUrl(
+    paymentSession?.payment?.storeQrCodeUrl || paymentSession?.store?.qrCodeUrl || ''
+  )
+  const generatedQrUrl = upiLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
     : ''
+  const qrUrl = uploadedStoreQr || generatedQrUrl
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -466,7 +471,9 @@ export default function CheckoutPage() {
 
                   {qrUrl && (
                     <div className="rounded-lg border bg-background p-3">
-                      <p className="text-sm font-medium mb-2">Scan UPI QR (Most Reliable)</p>
+                      <p className="text-sm font-medium mb-2">
+                        {uploadedStoreQr ? 'Scan Store UPI QR' : 'Scan UPI QR (Most Reliable)'}
+                      </p>
                       <div className="flex justify-center">
                         <img
                           src={qrUrl}

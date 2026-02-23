@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDate } from '@/lib/utils'
+import { resolveMediaUrl } from '@/lib/media'
 
 function StoreCardSkeleton() {
   return (
@@ -203,6 +204,7 @@ export default function StoresPage() {
               const operatingHoursLabel = formatOperatingHours(
                 store.operatingHours || store.operating_hours
               )
+              const storeImage = resolveMediaUrl(store.imageUrl || store.image_url || '')
 
               return (
                 <Card
@@ -211,10 +213,10 @@ export default function StoresPage() {
                   onClick={() => navigate(`/stores/${store._id || store.id}`)}
                 >
                   {/* Store Image */}
-                  {store.imageUrl ? (
+                  {storeImage ? (
                     <div className="h-40 overflow-hidden">
                       <img
-                        src={store.imageUrl}
+                        src={storeImage}
                         alt={store.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

@@ -29,6 +29,7 @@ import {
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency } from '@/lib/utils'
+import { resolveMediaUrl } from '@/lib/media'
 
 const EMPTY_FORM = {
   name: '',
@@ -126,7 +127,7 @@ export default function MenuManagementPage() {
       is_available: item.is_available ?? true,
       image: null,
     })
-    setImagePreview(item.image_url || null)
+    setImagePreview(resolveMediaUrl(item.image_url || item.imageUrl || ''))
     setFormErrors({})
     setFormDialog({ open: true, editing: item })
   }
@@ -302,85 +303,89 @@ export default function MenuManagementPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredItems.map((item) => (
-            <Card key={item.id || item._id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex items-stretch">
-                  {/* Image */}
-                  <div className="w-28 sm:w-32 flex-shrink-0 bg-muted overflow-hidden self-stretch min-h-28 sm:min-h-32">
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                      </div>
-                    )}
-                  </div>
+          {filteredItems.map((item) => {
+            const itemImage = resolveMediaUrl(item.image_url || item.imageUrl || '')
 
-                  {/* Info */}
-                  <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between min-w-0">
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-sm truncate">
-                            {item.name}
-                          </h3>
-                          {item.category && (
-                            <span className="text-xs text-muted-foreground">
-                              {item.category}
-                            </span>
-                          )}
+            return (
+              <Card key={item.id || item._id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    {/* Image */}
+                    <div className="w-28 sm:w-32 flex-shrink-0 bg-muted overflow-hidden self-stretch min-h-28 sm:min-h-32">
+                      {itemImage ? (
+                        <img
+                          src={itemImage}
+                          alt={item.name}
+                          className="w-full h-full object-cover object-center"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                         </div>
-                        <p className="font-bold text-sm whitespace-nowrap">
-                          {formatCurrency(item.price)}
-                        </p>
-                      </div>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {item.description}
-                        </p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={item.is_available}
-                          onCheckedChange={() => handleToggleAvailability(item)}
-                          disabled={toggleLoading === (item.id || item._id)}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {item.is_available ? 'Available' : 'Unavailable'}
-                        </span>
+                    {/* Info */}
+                    <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm truncate">
+                              {item.name}
+                            </h3>
+                            {item.category && (
+                              <span className="text-xs text-muted-foreground">
+                                {item.category}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-bold text-sm whitespace-nowrap">
+                            {formatCurrency(item.price)}
+                          </p>
+                        </div>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleOpenEdit(item)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteDialog({ open: true, item })}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={item.is_available}
+                            onCheckedChange={() => handleToggleAvailability(item)}
+                            disabled={toggleLoading === (item.id || item._id)}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {item.is_available ? 'Available' : 'Unavailable'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenEdit(item)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteDialog({ open: true, item })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
 

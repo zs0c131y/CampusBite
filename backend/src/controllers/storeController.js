@@ -1,6 +1,7 @@
 import Store from '../models/Store.js'
 import MenuItem from '../models/MenuItem.js'
 import { formatStore, formatMenuItem } from '../utils/formatters.js'
+import { resolveUploadedFilePath } from '../config/uploads.js'
 
 const UPI_ID_REGEX = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/
 
@@ -95,6 +96,7 @@ export const updateStore = async (req, res, next) => {
       is_active,
       operating_hours,
       image_url,
+      qr_code_url,
     } = req.body
 
     if (name) store.name = name
@@ -116,10 +118,19 @@ export const updateStore = async (req, res, next) => {
       store.operating_hours = parsedHours
     }
 
-    if (req.file) {
-      store.image_url = `/uploads/${req.file.filename}`
+    const uploadedStoreImage = req.files?.image?.[0] || req.file
+    const uploadedQrCode = req.files?.qr_code?.[0]
+
+    if (uploadedStoreImage) {
+      store.image_url = resolveUploadedFilePath(uploadedStoreImage.filename)
     } else if (image_url !== undefined) {
       store.image_url = image_url
+    }
+
+    if (uploadedQrCode) {
+      store.qr_code_url = resolveUploadedFilePath(uploadedQrCode.filename)
+    } else if (qr_code_url !== undefined) {
+      store.qr_code_url = qr_code_url
     }
 
     await store.save()

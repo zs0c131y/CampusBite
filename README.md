@@ -236,6 +236,10 @@ CampusBite/
 - UPI deep links only work on mobile devices with UPI apps installed
 - On desktop, use the manual payment confirmation flow
 
+**Uploaded images disappear on Fly.io restart:**
+- Set `UPLOAD_DIR=/data/uploads` and ensure a Fly volume is mounted at `/data`
+- Keep a single machine for local-file uploads unless you move media to object storage
+
 ## Environment Variables Reference
 
 | Variable | Description | Default |
@@ -253,3 +257,4 @@ CampusBite/
 | `SMTP_PASS` | SMTP password/app password | - |
 | `FROM_EMAIL` | Sender email address | - |
 | `FRONTEND_URL` | Frontend URL for email links | `http://localhost:5173` |
+| `UPLOAD_DIR` | Filesystem directory for uploaded images/QRs | `backend/public/uploads` (local), `/data/uploads` (Fly) |

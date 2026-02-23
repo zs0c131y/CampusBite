@@ -1,6 +1,7 @@
 import Store from '../models/Store.js'
 import MenuItem from '../models/MenuItem.js'
 import { formatMenuItem } from '../utils/formatters.js'
+import { resolveUploadedFilePath } from '../config/uploads.js'
 
 export const addMenuItem = async (req, res, next) => {
   try {
@@ -17,7 +18,7 @@ export const addMenuItem = async (req, res, next) => {
     const { name, description, price, category } = req.body
     let imageUrl = null
     if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`
+      imageUrl = resolveUploadedFilePath(req.file.filename)
     }
 
     const menuItem = await MenuItem.create({
@@ -69,7 +70,7 @@ export const updateMenuItem = async (req, res, next) => {
     if (is_available !== undefined) item.is_available = is_available === true || is_available === 'true'
 
     if (req.file) {
-      item.image_url = `/uploads/${req.file.filename}`
+      item.image_url = resolveUploadedFilePath(req.file.filename)
     }
 
     await item.save()

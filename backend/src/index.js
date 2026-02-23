@@ -18,6 +18,7 @@ import storeRoutes from "./routes/storeRoutes.js";
 import menuRoutes from "./routes/menuRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import { uploadsDir, uploadsPublicPath } from "./config/uploads.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,7 +101,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // Static files
-app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use(uploadsPublicPath, express.static(uploadsDir));
 
 // Health check
 app.get("/api/health", (req, res) => {
