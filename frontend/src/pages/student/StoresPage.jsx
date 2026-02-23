@@ -27,6 +27,17 @@ function StoreCardSkeleton() {
   )
 }
 
+const formatOperatingHours = (hours) => {
+  if (!hours) return ''
+  if (typeof hours === 'string') return hours
+  if (typeof hours === 'object') {
+    const open = hours.open || hours.opening_time
+    const close = hours.close || hours.closing_time
+    if (open || close) return `${open || '--'} to ${close || '--'}`
+  }
+  return ''
+}
+
 export default function StoresPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -188,61 +199,67 @@ export default function StoresPage() {
         {/* Stores Grid */}
         {!loading && filteredStores.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredStores.map((store) => (
-              <Card
-                key={store._id || store.id}
-                className="overflow-hidden cursor-pointer group transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_34px_-24px_rgba(32,23,15,0.65)]"
-                onClick={() => navigate(`/stores/${store._id || store.id}`)}
-              >
-                {/* Store Image */}
-                {store.imageUrl ? (
-                  <div className="h-40 overflow-hidden">
-                    <img
-                      src={store.imageUrl}
-                      alt={store.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-40 bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center">
-                    <Store className="h-12 w-12 text-white/80" />
-                  </div>
-                )}
+            {filteredStores.map((store) => {
+              const operatingHoursLabel = formatOperatingHours(
+                store.operatingHours || store.operating_hours
+              )
 
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg text-foreground mb-1 group-hover:text-orange-600 transition-colors">
-                    {store.name}
-                  </h3>
-
-                  {store.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {store.description}
-                    </p>
+              return (
+                <Card
+                  key={store._id || store.id}
+                  className="overflow-hidden cursor-pointer group transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_34px_-24px_rgba(32,23,15,0.65)]"
+                  onClick={() => navigate(`/stores/${store._id || store.id}`)}
+                >
+                  {/* Store Image */}
+                  {store.imageUrl ? (
+                    <div className="h-40 overflow-hidden">
+                      <img
+                        src={store.imageUrl}
+                        alt={store.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-40 bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                      <Store className="h-12 w-12 text-white/80" />
+                    </div>
                   )}
 
-                  <div className="flex items-center justify-between gap-2">
-                    {store.operatingHours && (
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {store.operatingHours}
-                      </Badge>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-lg text-foreground mb-1 group-hover:text-orange-600 transition-colors">
+                      {store.name}
+                    </h3>
+
+                    {store.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {store.description}
+                      </p>
                     )}
 
-                    <Button
-                      size="sm"
-                      className="ml-auto"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/stores/${store._id || store.id}`)
-                      }}
-                    >
-                      View Menu
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex items-center justify-between gap-2">
+                      {operatingHoursLabel && (
+                        <Badge variant="secondary" className="text-xs font-normal">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {operatingHoursLabel}
+                        </Badge>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="ml-auto"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/stores/${store._id || store.id}`)
+                        }}
+                      >
+                        View Menu
+                        <ArrowRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>

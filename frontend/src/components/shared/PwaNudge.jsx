@@ -10,7 +10,7 @@ export function PwaNudge() {
 
   useEffect(() => {
     const onBeforeInstallPrompt = (event) => {
-      event.preventDefault()
+      if (typeof event.prompt !== 'function') return
       setDeferredPrompt(event)
       setShowInstall(true)
     }
