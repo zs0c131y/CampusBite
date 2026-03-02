@@ -949,20 +949,31 @@ export const pollOrderStatus = async (req, res, next) => {
   try {
     await runOrderTimeoutSweep()
     const { id } = req.params
+    const userId = req.user.id
+    const role = req.user.role
+
+    if (!isValidObjectId(id)) {
+      return res.status(404).json({ success: false, message: 'Order not found.' })
+    }
 
     const order = await Order.findById(id).lean()
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found.',
-      })
+      return res.status(404).json({ success: false, message: 'Order not found.' })
     }
 
-    res.json({
-      success: true,
-      data: formatOrder(order),
-    })
+    if (role === 'store_employee') {
+      const store = await Store.findOne({ owner_id: userId }).lean()
+      // lean() keeps store_id as a raw ObjectId; String() handles both ObjectId and string
+      if (!store || store._id.toString() !== String(order.store_id)) {
+        return res.status(403).json({ success: false, message: 'You are not authorized to view this order.' })
+      }
+    // lean() keeps user_id as a raw ObjectId; String() handles both ObjectId and string
+    } else if (String(order.user_id) !== userId) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this order.' })
+    }
+
+    res.json({ success: true, data: formatOrder(order) })
   } catch (error) {
     next(error)
   }
