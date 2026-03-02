@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const menuItemSchema = new mongoose.Schema(
   {
-    store_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
+    store_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true, index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: null },
     price: { type: Number, required: true, min: 0 },

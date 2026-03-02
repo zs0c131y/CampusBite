@@ -15,8 +15,8 @@ const orderSchema = new mongoose.Schema(
   {
     order_number: { type: String, required: true, unique: true, index: true },
     payment_reference: { type: String, required: true, unique: true, index: true },
-    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    store_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    store_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true, index: true },
     items: { type: [orderItemSchema], default: [] },
     total_amount: { type: Number, required: true },
     payment_status: {
