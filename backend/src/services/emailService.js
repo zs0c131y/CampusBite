@@ -1,5 +1,13 @@
 import { sendEmail } from '../config/email.js';
 
+const escapeHtml = (str) =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const baseStyles = `
@@ -70,7 +78,7 @@ export const sendVerificationEmail = async (email, name, token) => {
   const verificationLink = `${FRONTEND_URL}/verify-email/${token}`;
 
   const content = `
-    <h2 style="color: #333333; margin-top: 0;">Welcome, ${name}!</h2>
+    <h2 style="color: #333333; margin-top: 0;">Welcome, ${escapeHtml(name)}!</h2>
     <p style="color: #555555; line-height: 1.6;">
       Thank you for registering with CampusBite. Please verify your email address to get started.
     </p>
@@ -96,7 +104,7 @@ export const sendPasswordResetEmail = async (email, name, token) => {
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Password Reset Request</h2>
     <p style="color: #555555; line-height: 1.6;">
-      Hi ${name}, we received a request to reset your password. Click the button below to create a new password.
+      Hi ${escapeHtml(name)}, we received a request to reset your password. Click the button below to create a new password.
     </p>
     <div style="text-align: center;">
       <a href="${resetLink}" style="${buttonStyles}">Reset Password</a>
@@ -119,8 +127,8 @@ export const sendOrderConfirmation = async (email, name, order) => {
     .map(
       (item) => `
     <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee;">${escapeHtml(item.name)}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${Number(item.quantity)}</td>
       <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">&#8377;${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `
@@ -130,11 +138,11 @@ export const sendOrderConfirmation = async (email, name, order) => {
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Order Confirmed!</h2>
     <p style="color: #555555; line-height: 1.6;">
-      Hi ${name}, your order has been placed successfully.
+      Hi ${escapeHtml(name)}, your order has been placed successfully.
     </p>
     <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 15px 0;">
       <p style="margin: 0; color: #333;"><strong>Order Number:</strong> ${order.order_number}</p>
-      <p style="margin: 5px 0 0 0; color: #333;"><strong>Store:</strong> ${order.store_name || 'N/A'}</p>
+      <p style="margin: 5px 0 0 0; color: #333;"><strong>Store:</strong> ${escapeHtml(order.store_name || 'N/A')}</p>
     </div>
     <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
       <thead>
@@ -182,12 +190,12 @@ export const sendOrderStatusUpdate = async (email, name, order, status) => {
 
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Order Status Update</h2>
-    <p style="color: #555555; line-height: 1.6;">Hi ${name},</p>
+    <p style="color: #555555; line-height: 1.6;">Hi ${escapeHtml(name)},</p>
     <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${statusColors[status] || '#FF6B35'};">
-      <p style="margin: 0; color: #333;"><strong>Order:</strong> ${order.order_number}</p>
+      <p style="margin: 0; color: #333;"><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>
       <p style="margin: 10px 0 0 0; color: #333;">
         <strong>Status:</strong>
-        <span style="color: ${statusColors[status] || '#FF6B35'}; font-weight: bold; text-transform: uppercase;">${status.replace('_', ' ')}</span>
+        <span style="color: ${statusColors[status] || '#FF6B35'}; font-weight: bold; text-transform: uppercase;">${escapeHtml(status.replace('_', ' '))}</span>
       </p>
     </div>
     <p style="color: #555555; line-height: 1.6;">
@@ -203,7 +211,7 @@ export const sendOtpEmail = async (email, name, otp, orderNumber) => {
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Your Pickup OTP</h2>
     <p style="color: #555555; line-height: 1.6;">
-      Hi ${name}, your order <strong>${orderNumber}</strong> is ready for pickup!
+      Hi ${escapeHtml(name)}, your order <strong>${escapeHtml(orderNumber)}</strong> is ready for pickup!
     </p>
     <p style="color: #555555; line-height: 1.6;">
       Please share the following OTP with the store employee when collecting your order:
