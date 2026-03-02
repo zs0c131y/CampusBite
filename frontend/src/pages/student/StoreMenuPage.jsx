@@ -16,18 +16,11 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import api from '@/lib/api'
 import { useCart } from '@/contexts/CartContext'
 import { formatCurrency } from '@/lib/utils'
 import { resolveMediaUrl } from '@/lib/media'
+import { CartConflictDialog } from '@/components/shared/CartConflictDialog'
 
 function MenuItemSkeleton() {
   return (
@@ -56,7 +49,7 @@ export default function StoreMenuPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, item: null })
+  const [cartConflict, setCartConflict] = useState(null)
 
   useEffect(() => {
     fetchStoreData()
@@ -111,43 +104,22 @@ export default function StoreMenuPage() {
   const handleAddToCart = (item) => {
     if (!item.isAvailable) return
 
-    // Check if cart has items from a different store
-    if (cart.storeId && cart.storeId !== storeId) {
-      setConfirmDialog({ open: true, item })
-      return
+    const storeInfo = { id: storeId, name: store?.name || '' }
+    const result = cart.addItem(
+      {
+        id: item._id || item.id,
+        name: item.name,
+        price: item.price,
+        imageUrl: item.imageUrl,
+        quantity: 1,
+      },
+      storeInfo
+    )
+    if (result?.conflict) {
+      setCartConflict(result)
+    } else {
+      toast.success(`${item.name} added to cart`)
     }
-
-    const storeInfo = { id: storeId, name: store?.name || '' }
-    cart.addItem(
-      {
-        id: item._id || item.id,
-        name: item.name,
-        price: item.price,
-        imageUrl: item.imageUrl,
-        quantity: 1,
-      },
-      storeInfo
-    )
-    toast.success(`${item.name} added to cart`)
-  }
-
-  const handleConfirmClearCart = () => {
-    if (!confirmDialog.item) return
-    cart.clearCart()
-    const storeInfo = { id: storeId, name: store?.name || '' }
-    const item = confirmDialog.item
-    cart.addItem(
-      {
-        id: item._id || item.id,
-        name: item.name,
-        price: item.price,
-        imageUrl: item.imageUrl,
-        quantity: 1,
-      },
-      storeInfo
-    )
-    toast.success(`${item.name} added to cart`)
-    setConfirmDialog({ open: false, item: null })
   }
 
   const handleUpdateQuantity = (item, newQuantity) => {
@@ -425,34 +397,17 @@ export default function StoreMenuPage() {
         </div>
       )}
 
-      {/* Confirm Clear Cart Dialog */}
-      <Dialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => {
-          if (!open) setConfirmDialog({ open: false, item: null })
+      <CartConflictDialog
+        open={!!cartConflict}
+        currentStoreName={cartConflict?.currentStoreName}
+        newStoreName={cartConflict?.newStore?.name}
+        onConfirm={() => {
+          cart.replaceCart(cartConflict.item, cartConflict.newStore)
+          toast.success(`${cartConflict.item.name} added to cart`)
+          setCartConflict(null)
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Replace cart items?</DialogTitle>
-            <DialogDescription>
-              Your cart has items from <strong>{cart.storeName}</strong>. Clear
-              cart and add this item from <strong>{store?.name}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDialog({ open: false, item: null })}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmClearCart}>
-              Clear Cart & Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onCancel={() => setCartConflict(null)}
+      />
     </div>
   )
 }

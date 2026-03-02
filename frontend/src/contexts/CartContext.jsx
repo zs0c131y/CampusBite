@@ -14,12 +14,20 @@ function loadCartFromStorage() {
         storeId: parsed.storeId || null,
         storeName: parsed.storeName || '',
         specialInstructions: parsed.specialInstructions || '',
+        wasCorrupt: false,
       }
     }
   } catch {
-    /* ignore corrupt storage */
+    localStorage.removeItem(CART_STORAGE_KEY)
+    return {
+      items: [],
+      storeId: null,
+      storeName: '',
+      specialInstructions: '',
+      wasCorrupt: true,
+    }
   }
-  return { items: [], storeId: null, storeName: '', specialInstructions: '' }
+  return { items: [], storeId: null, storeName: '', specialInstructions: '', wasCorrupt: false }
 }
 
 export function CartProvider({ children }) {
@@ -29,6 +37,7 @@ export function CartProvider({ children }) {
   const [specialInstructions, setSpecialInstructions] = useState(
     () => loadCartFromStorage().specialInstructions
   )
+  const [cartWasCorrupt] = useState(() => loadCartFromStorage().wasCorrupt)
 
   useEffect(() => {
     localStorage.setItem(
@@ -40,11 +49,8 @@ export function CartProvider({ children }) {
   const addItem = useCallback(
     (item, store) => {
       if (storeId && storeId !== store.id) {
-        const confirmed = window.confirm(
-          `Your cart contains items from ${storeName}. Would you like to clear the cart and add items from ${store.name}?`
-        )
-        if (!confirmed) return false
-        setItems([])
+        // Return conflict info — caller handles the confirmation dialog
+        return { conflict: true, currentStoreName: storeName, newStore: store, item }
       }
 
       setStoreId(store.id)
@@ -72,7 +78,7 @@ export function CartProvider({ children }) {
           },
         ]
       })
-      return true
+      return { conflict: false }
     },
     [storeId, storeName]
   )
@@ -114,6 +120,25 @@ export function CartProvider({ children }) {
     setSpecialInstructions('')
   }, [])
 
+  const replaceCart = useCallback(
+    (item, store) => {
+      setStoreId(store.id)
+      setStoreName(store.name)
+      setSpecialInstructions('')
+      setItems([
+        {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          imageUrl: item.imageUrl || null,
+          notes: item.notes || '',
+        },
+      ])
+    },
+    []
+  )
+
   const getTotal = useCallback(() => {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   }, [items])
@@ -128,10 +153,12 @@ export function CartProvider({ children }) {
       storeId,
       storeName,
       specialInstructions,
+      cartWasCorrupt,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
+      replaceCart,
       getTotal,
       getItemCount,
       setSpecialInstructions,
@@ -141,10 +168,12 @@ export function CartProvider({ children }) {
       storeId,
       storeName,
       specialInstructions,
+      cartWasCorrupt,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
+      replaceCart,
       getTotal,
       getItemCount,
     ]
