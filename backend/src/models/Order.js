@@ -49,4 +49,8 @@ const orderSchema = new mongoose.Schema(
   }
 )
 
+// Compound indexes for the order timeout sweep queries
+orderSchema.index({ order_status: 1, payment_status: 1, created_at: 1 })
+orderSchema.index({ order_status: 1, is_otp_verified: 1, ready_expires_at: 1 })
+
 export default mongoose.model('Order', orderSchema)

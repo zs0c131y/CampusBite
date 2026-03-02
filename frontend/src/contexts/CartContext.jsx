@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 const CartContext = createContext(null)
 
@@ -31,13 +31,17 @@ function loadCartFromStorage() {
 }
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => loadCartFromStorage().items)
-  const [storeId, setStoreId] = useState(() => loadCartFromStorage().storeId)
-  const [storeName, setStoreName] = useState(() => loadCartFromStorage().storeName)
-  const [specialInstructions, setSpecialInstructions] = useState(
-    () => loadCartFromStorage().specialInstructions
-  )
-  const [cartWasCorrupt] = useState(() => loadCartFromStorage().wasCorrupt)
+  const cartInitRef = useRef(null)
+  if (cartInitRef.current === null) {
+    cartInitRef.current = loadCartFromStorage()
+  }
+  const init = cartInitRef.current
+
+  const [items, setItems] = useState(init.items)
+  const [storeId, setStoreId] = useState(init.storeId)
+  const [storeName, setStoreName] = useState(init.storeName)
+  const [specialInstructions, setSpecialInstructions] = useState(init.specialInstructions)
+  const [cartWasCorrupt] = useState(init.wasCorrupt)
 
   useEffect(() => {
     localStorage.setItem(

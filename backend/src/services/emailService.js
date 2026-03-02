@@ -218,7 +218,7 @@ export const sendOtpEmail = async (email, name, otp, orderNumber) => {
     </p>
     <div style="text-align: center; margin: 25px 0;">
       <div style="display: inline-block; background-color: #FF6B35; color: #ffffff; padding: 15px 40px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px;">
-        ${otp}
+        ${escapeHtml(String(otp))}
       </div>
     </div>
     <p style="color: #888888; font-size: 13px; text-align: center;">
