@@ -23,6 +23,16 @@ export const runStartupPreflight = () => {
     )
   }
 
+  const jwtSecret = process.env.JWT_SECRET || ''
+  if (jwtSecret.length < 32) {
+    throw new Error('[Startup] JWT_SECRET must be at least 32 characters long.')
+  }
+
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || ''
+  if (jwtRefreshSecret.length < 32) {
+    throw new Error('[Startup] JWT_REFRESH_SECRET must be at least 32 characters long.')
+  }
+
   const dbType = (process.env.DB_TYPE || 'mongodb').toLowerCase()
   if (dbType !== 'mongodb') {
     console.warn(

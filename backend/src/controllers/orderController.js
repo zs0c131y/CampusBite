@@ -235,7 +235,9 @@ const buildOrderDraft = async ({ items, storeId, specialInstructions }) => {
     normalizedItems,
     orderItems,
     totalAmount,
-    specialInstructions: specialInstructions?.trim() || null,
+    specialInstructions: specialInstructions
+      ? specialInstructions.trim().replace(/<[^>]*>/g, '').slice(0, 500) || null
+      : null,
   }
 }
 
