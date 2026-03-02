@@ -20,5 +20,8 @@ export const validateOtp = (storedOtp, inputOtp, expiresAt) => {
     return false;
   }
 
-  return storedOtp === inputOtp;
+  const a = Buffer.from(String(storedOtp))
+  const b = Buffer.from(String(inputOtp))
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(a, b)
 };
