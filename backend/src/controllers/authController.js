@@ -190,11 +190,16 @@ export const register = async (req, res, next) => {
     })
 
     if (role === 'store_employee') {
-      await Store.create({
-        name: storeName.trim(),
-        upi_id: storeUpiId.trim().toLowerCase(),
-        owner_id: user._id,
-      })
+      try {
+        await Store.create({
+          name: storeName.trim(),
+          upi_id: storeUpiId.trim().toLowerCase(),
+          owner_id: user._id,
+        })
+      } catch (storeError) {
+        await User.deleteOne({ _id: user._id })
+        throw storeError
+      }
     }
 
     try {
@@ -284,10 +289,9 @@ export const verifyEmail = async (req, res, next) => {
       })
     }
 
-    if (!user.is_email_verified) {
-      user.is_email_verified = true
-      await user.save()
-    }
+    user.is_email_verified = true
+    user.email_verification_token = null
+    await user.save()
 
     res.json({
       success: true,
