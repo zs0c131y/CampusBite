@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
@@ -11,19 +11,19 @@ import {
   ShoppingCart,
   Smartphone,
   XCircle,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Spinner } from '@/components/ui/spinner'
-import api from '@/lib/api'
-import { useCart } from '@/contexts/CartContext'
-import { formatCurrency, getTrustTierMeta } from '@/lib/utils'
-import { resolveMediaUrl } from '@/lib/media'
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import api from "@/lib/api";
+import { useCart } from "@/contexts/CartContext";
+import { formatCurrency, getTrustTierMeta } from "@/lib/utils";
+import { resolveMediaUrl } from "@/lib/media";
 
 const normalizeOrderItems = (items = []) =>
   items.map((item, idx) => ({
@@ -31,53 +31,54 @@ const normalizeOrderItems = (items = []) =>
     name: item.name,
     price: Number(item.price || 0),
     quantity: Number(item.quantity || 0),
-  }))
+  }));
 
 const buildCrossCheckText = (order) => {
-  const orderId = order.id || order._id
+  const orderId = order.id || order._id;
   return [
-    'CampusBite Payment Cross-Check',
+    "CampusBite Payment Cross-Check",
     `Order ID: ${orderId}`,
-    `Order Number: ${order.orderNumber || order.order_number || 'N/A'}`,
-    `Payment Reference: ${order.paymentReference || order.payment_reference || 'N/A'}`,
-    `Transaction ID: ${order.transactionId || order.transaction_id || 'N/A'}`,
+    `Order Number: ${order.orderNumber || order.order_number || "N/A"}`,
+    `Payment Reference: ${order.paymentReference || order.payment_reference || "N/A"}`,
+    `Transaction ID: ${order.transactionId || order.transaction_id || "N/A"}`,
     `Amount: ${formatCurrency(order.totalAmount || order.total_amount || 0)}`,
-  ].join('\n')
-}
+  ].join("\n");
+};
 
 export default function CheckoutPage() {
-  const navigate = useNavigate()
-  const cart = useCart()
+  const navigate = useNavigate();
+  const cart = useCart();
   const isMobileDevice =
-    typeof navigator !== 'undefined' &&
-    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   const isAndroidDevice =
-    typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+    typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 
-  const [sessionLoading, setSessionLoading] = useState(false)
-  const [confirmLoading, setConfirmLoading] = useState(false)
-  const [paymentSession, setPaymentSession] = useState(null)
-  const [paymentState, setPaymentState] = useState('idle')
-  const [transactionId, setTransactionId] = useState('')
-  const [orderResult, setOrderResult] = useState(null)
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [paymentSession, setPaymentSession] = useState(null);
+  const [paymentState, setPaymentState] = useState("idle");
+  const [transactionId, setTransactionId] = useState("");
+  const [orderResult, setOrderResult] = useState(null);
 
-  const cartItems = cart.items
-  const totalAmount = cart.getTotal()
+  const cartItems = cart.items;
+  const totalAmount = cart.getTotal();
 
   const displayItems = useMemo(() => {
-    if (orderResult) return normalizeOrderItems(orderResult.items)
-    if (paymentSession?.items?.length) return normalizeOrderItems(paymentSession.items)
-    return normalizeOrderItems(cartItems)
-  }, [orderResult, paymentSession, cartItems])
+    if (orderResult) return normalizeOrderItems(orderResult.items);
+    if (paymentSession?.items?.length)
+      return normalizeOrderItems(paymentSession.items);
+    return normalizeOrderItems(cartItems);
+  }, [orderResult, paymentSession, cartItems]);
 
   const handleInitiatePayment = async () => {
     if (cartItems.length === 0 || !cart.storeId) {
-      toast.error('Your cart is empty')
-      return
+      toast.error("Your cart is empty");
+      return;
     }
 
-    setSessionLoading(true)
-    setPaymentState('idle')
+    setSessionLoading(true);
+    setPaymentState("idle");
 
     try {
       const payload = {
@@ -87,111 +88,120 @@ export default function CheckoutPage() {
           quantity: item.quantity,
         })),
         specialInstructions: cart.specialInstructions || undefined,
-      }
+      };
 
-      const { data } = await api.post('/orders/checkout-session', payload)
+      const { data } = await api.post("/orders/checkout-session", payload);
       if (data.success) {
-        setPaymentSession(data.data)
-        toast.success('Payment session ready. Complete payment and submit transaction ID.')
+        setPaymentSession(data.data);
+        toast.success(
+          "Payment session ready. Complete payment and submit transaction ID.",
+        );
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to start payment.')
+      toast.error(error.response?.data?.message || "Unable to start payment.");
     } finally {
-      setSessionLoading(false)
+      setSessionLoading(false);
     }
-  }
+  };
 
   const copyPaymentReferenceBestEffort = async () => {
-    const reference = paymentSession?.paymentReference
-    if (!reference || !navigator?.clipboard?.writeText) return
+    const reference = paymentSession?.paymentReference;
+    if (!reference || !navigator?.clipboard?.writeText) return;
 
     try {
-      await navigator.clipboard.writeText(reference)
-      toast.success('Payment reference copied. Paste it in app note if asked.')
+      await navigator.clipboard.writeText(reference);
+      toast.success("Payment reference copied. Paste it in app note if asked.");
     } catch {
       // best-effort only
     }
-  }
+  };
 
   const handleOpenUpi = async () => {
     const chooserLink =
       paymentSession?.payment?.upiCompatibilityAppLinks?.chooser ||
-      paymentSession?.payment?.upiAppLinks?.chooser
+      paymentSession?.payment?.upiAppLinks?.chooser;
     const genericLink =
       paymentSession?.payment?.upiCompatibilityLink ||
-      paymentSession?.payment?.upiLink
-    const targetLink = isAndroidDevice ? chooserLink || genericLink : genericLink
+      paymentSession?.payment?.upiLink;
+    const targetLink = isAndroidDevice
+      ? chooserLink || genericLink
+      : genericLink;
 
     if (!isMobileDevice) {
-      toast.info('Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.')
+      toast.info(
+        "Open this page on mobile for one-tap app launch. Use QR/copy below meanwhile.",
+      );
     }
     if (!targetLink) {
-      toast.error('UPI link unavailable right now.')
-      return
+      toast.error("UPI link unavailable right now.");
+      return;
     }
 
-    await copyPaymentReferenceBestEffort()
-    window.location.href = targetLink
+    await copyPaymentReferenceBestEffort();
+    window.location.href = targetLink;
 
-    if (isAndroidDevice && targetLink.startsWith('intent://') && genericLink) {
+    if (isAndroidDevice && targetLink.startsWith("intent://") && genericLink) {
       window.setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          window.location.href = genericLink
+        if (document.visibilityState === "visible") {
+          window.location.href = genericLink;
         }
-      }, 1200)
+      }, 1200);
     }
-  }
+  };
 
   const handleCopy = async (value, successMessage) => {
     try {
-      await navigator.clipboard.writeText(value)
-      toast.success(successMessage)
+      await navigator.clipboard.writeText(value);
+      toast.success(successMessage);
     } catch {
-      toast.error('Failed to copy')
+      toast.error("Failed to copy");
     }
-  }
+  };
 
   const handleConfirmPaid = async () => {
     if (!paymentSession?.checkoutToken) {
-      toast.error('Payment session missing. Please start again.')
-      return
+      toast.error("Payment session missing. Please start again.");
+      return;
     }
 
-    const normalizedTxnId = transactionId.trim().toUpperCase()
+    const normalizedTxnId = transactionId.trim().toUpperCase();
     if (normalizedTxnId && !/^[A-Z0-9]{8,40}$/.test(normalizedTxnId)) {
-      toast.error('Transaction ID must be 8-40 letters/numbers if provided.')
-      return
+      toast.error("Transaction ID must be 8-40 letters/numbers if provided.");
+      return;
     }
 
-    setConfirmLoading(true)
+    setConfirmLoading(true);
     try {
-      const { data } = await api.post('/orders', {
+      const { data } = await api.post("/orders", {
         checkoutToken: paymentSession.checkoutToken,
         transactionId: normalizedTxnId || undefined,
-      })
+      });
 
       if (data.success) {
-        setOrderResult(data.data)
-        setPaymentSession(null)
-        cart.clearCart()
-        toast.success(data.message || 'Order submitted successfully.')
+        setOrderResult(data.data);
+        setPaymentSession(null);
+        cart.clearCart();
+        toast.success(data.message || "Order submitted successfully.");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit payment confirmation.')
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to submit payment confirmation.",
+      );
     } finally {
-      setConfirmLoading(false)
+      setConfirmLoading(false);
     }
-  }
+  };
 
   const handleMarkPaymentFailed = () => {
-    setPaymentState('failed')
-    toast.error('Payment marked as failed. You can retry payment.')
-  }
+    setPaymentState("failed");
+    toast.error("Payment marked as failed. You can retry payment.");
+  };
 
   const handleRetryPayment = () => {
-    setPaymentState('idle')
-    setTransactionId('')
-  }
+    setPaymentState("idle");
+    setTransactionId("");
+  };
 
   if (!orderResult && cartItems.length === 0 && !paymentSession) {
     return (
@@ -202,15 +212,15 @@ export default function CheckoutPage() {
           <p className="text-muted-foreground mb-4 text-sm">
             Your cart is empty. Add items before checkout.
           </p>
-          <Button onClick={() => navigate('/stores')}>Browse Stores</Button>
+          <Button onClick={() => navigate("/stores")}>Browse Stores</Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (orderResult) {
-    const orderId = orderResult.id || orderResult._id
-    const crossCheckText = buildCrossCheckText(orderResult)
+    const orderId = orderResult.id || orderResult._id;
+    const crossCheckText = buildCrossCheckText(orderResult);
 
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4 py-8">
@@ -223,19 +233,25 @@ export default function CheckoutPage() {
                 </div>
                 <h2 className="text-2xl font-bold">Order Submitted</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Payment received from your side and order placed. Store verification is pending.
+                  Payment received from your side and order placed. Store
+                  verification is pending.
                 </p>
               </div>
 
               <div className="rounded-xl border bg-background p-4 text-sm space-y-2">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Order Number</span>
-                  <span className="font-semibold">#{orderResult.orderNumber || orderId}</span>
+                  <span className="font-semibold">
+                    #{orderResult.orderNumber || orderId}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Payment Reference</span>
+                  <span className="text-muted-foreground">
+                    Payment Reference
+                  </span>
                   <span className="font-semibold">
-                    {orderResult.paymentReference || orderResult.payment_reference}
+                    {orderResult.paymentReference ||
+                      orderResult.payment_reference}
                   </span>
                 </div>
                 <div className="flex justify-between gap-3">
@@ -247,7 +263,9 @@ export default function CheckoutPage() {
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-semibold">
-                    {formatCurrency(orderResult.totalAmount || orderResult.total_amount || 0)}
+                    {formatCurrency(
+                      orderResult.totalAmount || orderResult.total_amount || 0,
+                    )}
                   </span>
                 </div>
               </div>
@@ -255,52 +273,66 @@ export default function CheckoutPage() {
               <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800 flex items-start gap-2">
                 <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
                 <p>
-                  Share Order Number + Payment Reference + Transaction ID with the store for cross-check.
+                  Share Order Number + Payment Reference + Transaction ID with
+                  the store for cross-check.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => handleCopy(crossCheckText, 'Cross-check details copied')}
+                  onClick={() =>
+                    handleCopy(crossCheckText, "Cross-check details copied")
+                  }
                   className="gap-2"
                 >
                   <Copy className="h-4 w-4" />
                   Copy Details
                 </Button>
-                <Button onClick={() => navigate(`/orders/${orderId}`)} className="gap-2">
+                <Button
+                  onClick={() => navigate(`/orders/${orderId}`)}
+                  className="gap-2"
+                >
                   <ClipboardCheck className="h-4 w-4" />
                   Track Order
                 </Button>
               </div>
 
-              <Button variant="ghost" className="w-full" onClick={() => navigate('/orders')}>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => navigate("/orders")}
+              >
                 View All Orders
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
-  const summaryStoreName = paymentSession?.store?.name || cart.storeName || 'Campus Store'
-  const summaryAmount = paymentSession?.totalAmount || totalAmount
-  const noShowPolicy = paymentSession?.noShowPolicy || null
-  const trustTierMeta = getTrustTierMeta(noShowPolicy?.trustTier)
-  const storeUpiId = paymentSession?.payment?.storeUpiId || paymentSession?.store?.upiId || ''
-  const exactPayableAmount = Number(paymentSession?.totalAmount || 0)
+  const summaryStoreName =
+    paymentSession?.store?.name || cart.storeName || "Campus Store";
+  const summaryAmount = paymentSession?.totalAmount || totalAmount;
+  const noShowPolicy = paymentSession?.noShowPolicy || null;
+  const trustTierMeta = getTrustTierMeta(noShowPolicy?.trustTier);
+  const storeUpiId =
+    paymentSession?.payment?.storeUpiId || paymentSession?.store?.upiId || "";
+  const exactPayableAmount = Number(paymentSession?.totalAmount || 0);
   const exactPayableAmountText = Number.isFinite(exactPayableAmount)
     ? exactPayableAmount.toFixed(2)
-    : ''
-  const upiLink = paymentSession?.payment?.upiLink || ''
+    : "";
+  const upiLink = paymentSession?.payment?.upiLink || "";
   const uploadedStoreQr = resolveMediaUrl(
-    paymentSession?.payment?.storeQrCodeUrl || paymentSession?.store?.qrCodeUrl || ''
-  )
+    paymentSession?.payment?.storeQrCodeUrl ||
+      paymentSession?.store?.qrCodeUrl ||
+      "",
+  );
   const generatedQrUrl = upiLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
-    : ''
-  const qrUrl = uploadedStoreQr || generatedQrUrl
+    : "";
+  const qrUrl = uploadedStoreQr || generatedQrUrl;
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -309,7 +341,7 @@ export default function CheckoutPage() {
           variant="ghost"
           size="sm"
           className="mb-4 -ml-2"
-          onClick={() => navigate('/cart')}
+          onClick={() => navigate("/cart")}
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Cart
@@ -326,22 +358,32 @@ export default function CheckoutPage() {
             <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between rounded-lg border bg-background px-4 py-3">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Ordering From</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Ordering From
+                  </p>
                   <p className="font-semibold">{summaryStoreName}</p>
                 </div>
-                <Badge variant="secondary">{displayItems.length} item{displayItems.length !== 1 ? 's' : ''}</Badge>
+                <Badge variant="secondary">
+                  {displayItems.length} item
+                  {displayItems.length !== 1 ? "s" : ""}
+                </Badge>
               </div>
 
               <div className="space-y-2">
                 {displayItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-md border px-3 py-2.5">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2.5"
+                  >
                     <div>
                       <p className="font-medium text-sm">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} x {formatCurrency(item.price)}
                       </p>
                     </div>
-                    <p className="font-semibold text-sm">{formatCurrency(item.price * item.quantity)}</p>
+                    <p className="font-semibold text-sm">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -359,7 +401,9 @@ export default function CheckoutPage() {
 
               <div className="flex items-center justify-between">
                 <p className="text-base font-semibold">Total Payable</p>
-                <p className="text-2xl font-bold">{formatCurrency(summaryAmount)}</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(summaryAmount)}
+                </p>
               </div>
 
               {!paymentSession ? (
@@ -371,7 +415,10 @@ export default function CheckoutPage() {
                 >
                   {sessionLoading ? (
                     <>
-                      <Spinner size="sm" className="border-white border-t-transparent" />
+                      <Spinner
+                        size="sm"
+                        className="border-white border-t-transparent"
+                      />
                       Preparing Payment...
                     </>
                   ) : (
@@ -383,17 +430,14 @@ export default function CheckoutPage() {
                 </Button>
               ) : (
                 <div className="space-y-2">
-                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-                    Direct-to-store UPI is active. No extra student fee is added.
-                  </div>
                   {noShowPolicy && (
                     <div
                       className={`rounded-lg border px-3 py-2 text-xs ${
-                        noShowPolicy.trustTier === 'restricted'
-                          ? 'border-red-200 bg-red-50 text-red-800'
-                          : noShowPolicy.trustTier === 'watch'
-                          ? 'border-amber-200 bg-amber-50 text-amber-800'
-                          : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        noShowPolicy.trustTier === "restricted"
+                          ? "border-red-200 bg-red-50 text-red-800"
+                          : noShowPolicy.trustTier === "watch"
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
                       }`}
                     >
                       <p className="font-semibold">
@@ -402,8 +446,8 @@ export default function CheckoutPage() {
                       <p className="mt-0.5">
                         {trustTierMeta.hint}
                         {noShowPolicy.requiresCommitmentBeforePrep
-                          ? ' Store may wait for your on-the-way confirmation before preparation.'
-                          : ''}
+                          ? " Store may wait for your on-the-way confirmation before preparation."
+                          : ""}
                       </p>
                     </div>
                   )}
@@ -423,25 +467,61 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Amount</span>
-                      <span className="font-semibold">{formatCurrency(paymentSession.totalAmount)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(paymentSession.totalAmount)}
+                      </span>
                     </div>
-                    <div className="flex justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">Store UPI ID</span>
-                      <span className="font-semibold break-all text-right">{storeUpiId || 'N/A'}</span>
+                    <div className="flex justify-between items-center gap-2 text-sm">
+                      <span className="text-muted-foreground shrink-0">
+                        Store UPI ID
+                      </span>
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold break-all text-right">
+                          {storeUpiId || "N/A"}
+                        </span>
+                        {storeUpiId && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(storeUpiId, "UPI ID copied")
+                            }
+                            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Copy UPI ID"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Payment Reference</span>
-                      <span className="font-semibold">{paymentSession.paymentReference}</span>
+                    <div className="flex justify-between items-center gap-2 text-sm">
+                      <span className="text-muted-foreground shrink-0">
+                        Payment Note
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-semibold">
+                          {paymentSession.paymentReference}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(
+                              paymentSession.paymentReference,
+                              "Payment note copied",
+                            )
+                          }
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label="Copy payment note"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
                     </div>
                   </div>
 
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                    Money goes directly to the store UPI ID. CampusBite does not add any extra charge to this amount.
-                  </div>
-
+                  {/* Pay with UPI App — commented out (pay directly in store)
                   <div>
                     <p className="text-sm font-medium mb-2">Pay with UPI App</p>
                     {!isMobileDevice && (
@@ -468,11 +548,14 @@ export default function CheckoutPage() {
                       <span className="font-semibold">{paymentSession.paymentReference}</span>.
                     </p>
                   </div>
+                  */}
 
                   {qrUrl && (
                     <div className="rounded-lg border bg-background p-3">
                       <p className="text-sm font-medium mb-2">
-                        {uploadedStoreQr ? 'Scan Store UPI QR' : 'Scan UPI QR (Most Reliable)'}
+                        {uploadedStoreQr
+                          ? "Scan Store UPI QR"
+                          : "Scan UPI QR (Most Reliable)"}
                       </p>
                       <div className="flex justify-center">
                         <img
@@ -489,10 +572,7 @@ export default function CheckoutPage() {
                       variant="ghost"
                       className="justify-start text-sm"
                       onClick={() =>
-                        handleCopy(
-                          storeUpiId,
-                          'Store UPI ID copied'
-                        )
+                        handleCopy(storeUpiId, "Store UPI ID copied")
                       }
                       disabled={!storeUpiId}
                     >
@@ -505,7 +585,7 @@ export default function CheckoutPage() {
                       onClick={() =>
                         handleCopy(
                           paymentSession.paymentReference,
-                          'Payment reference copied'
+                          "Payment reference copied",
                         )
                       }
                     >
@@ -517,24 +597,30 @@ export default function CheckoutPage() {
                   <Separator />
 
                   <div className="space-y-2">
-                    <Label htmlFor="transactionId">UPI Transaction ID (optional)</Label>
+                    <Label htmlFor="transactionId">
+                      UPI Transaction ID (optional)
+                    </Label>
                     <Input
                       id="transactionId"
                       value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setTransactionId(e.target.value.toUpperCase())
+                      }
                       placeholder="Optional: paste only if available"
                       maxLength={40}
                     />
                     <p className="text-xs text-muted-foreground">
-                      You can proceed without transaction ID. Store can verify directly in their UPI app.
+                      You can proceed without transaction ID. Store can verify
+                      directly in their UPI app.
                     </p>
                   </div>
 
-                  {paymentState === 'failed' && (
+                  {paymentState === "failed" && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                       <p>
-                        Payment failed or not completed. Retry payment before submitting transaction ID.
+                        Payment failed or not completed. Retry payment before
+                        submitting transaction ID.
                       </p>
                     </div>
                   )}
@@ -553,13 +639,24 @@ export default function CheckoutPage() {
                       className="gap-2"
                       disabled={confirmLoading}
                     >
-                      {confirmLoading ? <Spinner size="sm" className="border-white border-t-transparent" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {confirmLoading ? (
+                        <Spinner
+                          size="sm"
+                          className="border-white border-t-transparent"
+                        />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
                       I Paid Successfully
                     </Button>
                   </div>
 
-                  {paymentState === 'failed' && (
-                    <Button variant="outline" className="w-full" onClick={handleRetryPayment}>
+                  {paymentState === "failed" && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleRetryPayment}
+                    >
                       Retry Payment
                     </Button>
                   )}
@@ -570,5 +667,5 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

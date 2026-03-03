@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingCart,
   User,
@@ -10,30 +10,30 @@ import {
   Settings,
   LogOut,
   ChefHat,
-} from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useCart } from '@/contexts/CartContext'
-import { NotificationBell } from '@/components/shared/NotificationBell'
-import { Button } from '@/components/ui/button'
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
+import { NotificationBell } from "@/components/shared/NotificationBell";
+import { Button } from "@/components/ui/button";
 
 export function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth()
-  const { getItemCount } = useCart()
-  const navigate = useNavigate()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
+  const { user, isAuthenticated, logout } = useAuth();
+  const { getItemCount } = useCart();
+  const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
-  const itemCount = getItemCount()
-  const isStoreEmployee = user?.role === 'store_employee'
+  const itemCount = getItemCount();
+  const isStoreEmployee = user?.role === "store_employee";
 
   const handleLogout = async () => {
-    await logout()
-    setProfileDropdownOpen(false)
-    setMobileMenuOpen(false)
-    navigate('/login')
-  }
+    await logout();
+    setProfileDropdownOpen(false);
+    setMobileMenuOpen(false);
+    navigate("/login");
+  };
 
-  const closeMobileMenu = () => setMobileMenuOpen(false)
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/88 shadow-[0_14px_28px_-26px_rgba(32,23,15,0.85)] backdrop-blur-md supports-[backdrop-filter]:bg-background/78">
@@ -54,7 +54,11 @@ export function Navbar() {
           <div className="hidden md:flex md:items-center md:gap-1">
             {!isAuthenticated ? (
               <>
-                <Button variant="ghost" className="h-9 rounded-full px-4" asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-4"
+                  asChild
+                >
                   <Link to="/login">Login</Link>
                 </Button>
                 <Button className="h-9 rounded-full px-4" asChild>
@@ -63,32 +67,60 @@ export function Navbar() {
               </>
             ) : isStoreEmployee ? (
               <>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
-                  <Link to="/store/dashboard" className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
+                  <Link
+                    to="/store/dashboard"
+                    className="flex items-center space-x-1"
+                  >
                     <Store className="h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
-                  <Link to="/store/orders" className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
+                  <Link
+                    to="/store/orders"
+                    className="flex items-center space-x-1"
+                  >
                     <ClipboardList className="h-4 w-4" />
                     <span>Orders</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
-                  <Link to="/store/menu" className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
+                  <Link
+                    to="/store/menu"
+                    className="flex items-center space-x-1"
+                  >
                     <ChefHat className="h-4 w-4" />
                     <span>Menu</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
-                  <Link to="/store/settings" className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
+                  <Link
+                    to="/store/settings"
+                    className="flex items-center space-x-1"
+                  >
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </Button>
                 <NotificationBell />
-                {/* Profile Dropdown */}}
+                {/* Profile Dropdown */}
                 <div className="relative">
                   <Button
                     variant="ghost"
@@ -136,25 +168,40 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
                   <Link to="/stores" className="flex items-center space-x-1">
                     <Store className="h-4 w-4" />
                     <span>Browse Stores</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
                   <Link to="/orders" className="flex items-center space-x-1">
                     <ClipboardList className="h-4 w-4" />
                     <span>My Orders</span>
                   </Link>
                 </Button>
-                <Button variant="ghost" className="h-9 rounded-full px-3.5" asChild>
-                  <Link to="/cart" className="relative flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3.5"
+                  asChild
+                >
+                  <Link
+                    to="/cart"
+                    className="relative flex items-center space-x-1"
+                  >
                     <ShoppingCart className="h-4 w-4" />
                     <span>Cart</span>
                     {itemCount > 0 && (
                       <span className="absolute -top-1 -right-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                        {itemCount > 99 ? '99+' : itemCount}
+                        {itemCount > 99 ? "99+" : itemCount}
                       </span>
                     )}
                   </Link>
@@ -216,7 +263,7 @@ export function Navbar() {
                 <Link to="/cart" className="relative">
                   <ShoppingCart className="h-5 w-5" />
                   <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {itemCount > 99 ? '99+' : itemCount}
+                    {itemCount > 99 ? "99+" : itemCount}
                   </span>
                 </Link>
               </Button>
@@ -226,7 +273,7 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -262,7 +309,9 @@ export function Navbar() {
             ) : isStoreEmployee ? (
               <>
                 <div className="px-3 py-2 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.name}
+                  </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <Link
@@ -316,7 +365,9 @@ export function Navbar() {
             ) : (
               <>
                 <div className="px-3 py-2 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.name}
+                  </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <Link
@@ -369,5 +420,5 @@ export function Navbar() {
         </div>
       )}
     </nav>
-  )
+  );
 }

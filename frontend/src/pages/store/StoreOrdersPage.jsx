@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   Clock,
@@ -11,15 +11,15 @@ import {
   Eye,
   CreditCard,
   ArrowLeft,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { Spinner } from '@/components/ui/spinner'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -27,197 +27,215 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { DesktopHint } from '@/components/shared/DesktopHint'
-import { usePolling } from '@/hooks/usePolling'
-import api from '@/lib/api'
-import { formatCurrency, formatDate, getCancellationReasonLabel } from '@/lib/utils'
+} from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { DesktopHint } from "@/components/shared/DesktopHint";
+import { usePolling } from "@/hooks/usePolling";
+import api from "@/lib/api";
+import {
+  formatCurrency,
+  formatDate,
+  getCancellationReasonLabel,
+} from "@/lib/utils";
 
 const STATUS_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'placed', label: 'New' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'processing', label: 'Preparing' },
-  { value: 'ready', label: 'Ready' },
-  { value: 'picked_up', label: 'Completed' },
-]
+  { value: "all", label: "All" },
+  { value: "placed", label: "New" },
+  { value: "accepted", label: "Accepted" },
+  { value: "processing", label: "Preparing" },
+  { value: "ready", label: "Ready" },
+  { value: "picked_up", label: "Completed" },
+];
 
 export default function StoreOrdersPage() {
-  const navigate = useNavigate()
-  const getOrderId = (order) => order?.id || order?._id
+  const navigate = useNavigate();
+  const getOrderId = (order) => order?.id || order?._id;
 
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('all')
-  const [actionLoading, setActionLoading] = useState(null)
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+  const [actionLoading, setActionLoading] = useState(null);
 
   // Payment dialog
-  const [paymentDialog, setPaymentDialog] = useState({ open: false, order: null })
-  const [transactionId, setTransactionId] = useState('')
-  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentDialog, setPaymentDialog] = useState({
+    open: false,
+    order: null,
+  });
+  const [transactionId, setTransactionId] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(null); // 'success' | 'failed' | null
 
   // OTP dialog
-  const [otpDialog, setOtpDialog] = useState({ open: false, order: null })
-  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpDialog, setOtpDialog] = useState({ open: false, order: null });
+  const [otpLoading, setOtpLoading] = useState(false);
 
   // New orders indicator
-  const hasLoadedRef = useRef(false)
-  const prevPlacedCountRef = useRef(0)
-  const [hasNewOrders, setHasNewOrders] = useState(false)
+  const hasLoadedRef = useRef(false);
+  const prevPlacedCountRef = useRef(0);
+  const [hasNewOrders, setHasNewOrders] = useState(false);
 
   const fetchOrders = useCallback(async ({ silent = false } = {}) => {
     try {
-      const res = await api.get('/orders')
-      const allOrders = res.data.data.orders || res.data.data || []
-      const orderList = Array.isArray(allOrders) ? allOrders : []
+      const res = await api.get("/orders");
+      const allOrders = res.data.data.orders || res.data.data || [];
+      const orderList = Array.isArray(allOrders) ? allOrders : [];
 
       // Check for new orders
-      const placedCount = orderList.filter((o) => o.status === 'placed').length
+      const placedCount = orderList.filter((o) => o.status === "placed").length;
       if (hasLoadedRef.current && placedCount > prevPlacedCountRef.current) {
-        setHasNewOrders(true)
-        toast.info('New order received!', { duration: 5000 })
+        setHasNewOrders(true);
+        toast.info("New order received!", { duration: 5000 });
       }
-      prevPlacedCountRef.current = placedCount
+      prevPlacedCountRef.current = placedCount;
 
-      setOrders(orderList)
+      setOrders(orderList);
       if (!hasLoadedRef.current) {
-        hasLoadedRef.current = true
-        setLoading(false)
+        hasLoadedRef.current = true;
+        setLoading(false);
       }
     } catch (err) {
       if (!silent && !hasLoadedRef.current) {
-        toast.error(err.response?.data?.message || 'Failed to load orders.')
+        toast.error(err.response?.data?.message || "Failed to load orders.");
       }
       if (!hasLoadedRef.current) {
-        hasLoadedRef.current = true
-        setLoading(false)
+        hasLoadedRef.current = true;
+        setLoading(false);
       }
     }
-  }, [])
+  }, []);
 
   // Near real-time polling for incoming orders.
-  usePolling(() => fetchOrders({ silent: hasLoadedRef.current }), 2000)
+  usePolling(() => fetchOrders({ silent: hasLoadedRef.current }), 2000);
 
   useEffect(() => {
     const handleFocus = () => {
-      fetchOrders({ silent: true })
-    }
+      fetchOrders({ silent: true });
+    };
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchOrders({ silent: true })
+      if (document.visibilityState === "visible") {
+        fetchOrders({ silent: true });
       }
-    }
+    };
 
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [fetchOrders])
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [fetchOrders]);
 
   // Filter orders by active tab
   const filteredOrders =
-    activeTab === 'all'
-      ? orders
-      : orders.filter((o) => o.status === activeTab)
+    activeTab === "all" ? orders : orders.filter((o) => o.status === activeTab);
 
   // Sort by most recent first
   const sortedOrders = [...filteredOrders].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-  )
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  );
 
   // Status update handler
   const handleStatusUpdate = async (orderId, newStatus) => {
-    setActionLoading(orderId)
+    setActionLoading(orderId);
     try {
-      const { data } = await api.patch(`/orders/${orderId}/status`, { status: newStatus })
-      toast.success(`Order status updated to ${newStatus}.`)
-      const updatedOrder = data?.data?.order
+      const { data } = await api.patch(`/orders/${orderId}/status`, {
+        status: newStatus,
+      });
+      toast.success(`Order status updated to ${newStatus}.`);
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        const updatedId = getOrderId(updatedOrder)
+        const updatedId = getOrderId(updatedOrder);
         setOrders((prev) =>
-          prev.map((order) => (getOrderId(order) === updatedId ? updatedOrder : order))
-        )
+          prev.map((order) =>
+            getOrderId(order) === updatedId ? updatedOrder : order,
+          ),
+        );
       } else {
-        fetchOrders({ silent: true })
+        fetchOrders({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update order status.')
+      toast.error(
+        err.response?.data?.message || "Failed to update order status.",
+      );
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   // Payment confirmation
   const handlePaymentConfirm = async (status) => {
-    if (!paymentDialog.order) return
-    const orderId = paymentDialog.order.id || paymentDialog.order._id
-    setPaymentLoading(true)
+    if (!paymentDialog.order) return;
+    const orderId = paymentDialog.order.id || paymentDialog.order._id;
+    setPaymentLoading(status);
     try {
       const { data } = await api.patch(`/orders/${orderId}/payment-status`, {
         paymentStatus: status,
         transactionId: transactionId || undefined,
-      })
+      });
       toast.success(
-        status === 'success'
-          ? 'Payment confirmed successfully.'
-          : 'Payment marked as failed.'
-      )
-      setPaymentDialog({ open: false, order: null })
-      setTransactionId('')
-      const updatedOrder = data?.data?.order
+        status === "success"
+          ? "Payment confirmed successfully."
+          : "Payment marked as failed.",
+      );
+      setPaymentDialog({ open: false, order: null });
+      setTransactionId("");
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        const updatedId = getOrderId(updatedOrder)
+        const updatedId = getOrderId(updatedOrder);
         setOrders((prev) =>
-          prev.map((order) => (getOrderId(order) === updatedId ? updatedOrder : order))
-        )
+          prev.map((order) =>
+            getOrderId(order) === updatedId ? updatedOrder : order,
+          ),
+        );
       } else {
-        fetchOrders({ silent: true })
+        fetchOrders({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update payment status.')
+      toast.error(
+        err.response?.data?.message || "Failed to update payment status.",
+      );
     } finally {
-      setPaymentLoading(false)
+      setPaymentLoading(null);
     }
-  }
+  };
 
   const handleOtpVerify = async () => {
-    if (!otpDialog.order) return
-    const orderId = otpDialog.order.id || otpDialog.order._id
+    if (!otpDialog.order) return;
+    const orderId = otpDialog.order.id || otpDialog.order._id;
 
-    setOtpLoading(true)
+    setOtpLoading(true);
     try {
-      const { data } = await api.post(`/orders/${orderId}/verify-otp`, { manualConfirm: true })
-      toast.success('Pickup confirmed. Order completed successfully.')
-      setOtpDialog({ open: false, order: null })
-      const updatedOrder = data?.data?.order
+      const { data } = await api.post(`/orders/${orderId}/verify-otp`, {
+        manualConfirm: true,
+      });
+      toast.success("Pickup confirmed. Order completed successfully.");
+      setOtpDialog({ open: false, order: null });
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        const updatedId = getOrderId(updatedOrder)
+        const updatedId = getOrderId(updatedOrder);
         setOrders((prev) =>
-          prev.map((order) => (getOrderId(order) === updatedId ? updatedOrder : order))
-        )
+          prev.map((order) =>
+            getOrderId(order) === updatedId ? updatedOrder : order,
+          ),
+        );
       } else {
-        fetchOrders({ silent: true })
+        fetchOrders({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'OTP verification failed.')
+      toast.error(err.response?.data?.message || "OTP verification failed.");
     } finally {
-      setOtpLoading(false)
+      setOtpLoading(false);
     }
-  }
+  };
 
   // Render action buttons based on status
   const renderActions = (order) => {
-    const orderId = order.id || order._id
-    const isLoading = actionLoading === orderId
-    const isPaid = order.payment_status === 'success'
+    const orderId = order.id || order._id;
+    const isLoading = actionLoading === orderId;
 
     return (
       <div className="flex flex-wrap gap-2 mt-3">
-        {order.payment_status === 'pending' && (
+        {order.status === "ready" && order.payment_status === "pending" && (
           <Button
             size="sm"
             variant="warning"
@@ -230,15 +248,18 @@ export default function StoreOrdersPage() {
           </Button>
         )}
 
-        {order.status === 'placed' && isPaid && (
+        {order.status === "placed" && (
           <Button
             size="sm"
-            onClick={() => handleStatusUpdate(orderId, 'accepted')}
+            onClick={() => handleStatusUpdate(orderId, "accepted")}
             disabled={isLoading}
             className="gap-1.5"
           >
             {isLoading ? (
-              <Spinner size="sm" className="border-current border-t-transparent" />
+              <Spinner
+                size="sm"
+                className="border-current border-t-transparent"
+              />
             ) : (
               <CheckCircle2 className="h-3.5 w-3.5" />
             )}
@@ -246,15 +267,18 @@ export default function StoreOrdersPage() {
           </Button>
         )}
 
-        {order.status === 'accepted' && (
+        {order.status === "accepted" && (
           <Button
             size="sm"
-            onClick={() => handleStatusUpdate(orderId, 'processing')}
+            onClick={() => handleStatusUpdate(orderId, "processing")}
             disabled={isLoading}
             className="gap-1.5"
           >
             {isLoading ? (
-              <Spinner size="sm" className="border-current border-t-transparent" />
+              <Spinner
+                size="sm"
+                className="border-current border-t-transparent"
+              />
             ) : (
               <ChefHat className="h-3.5 w-3.5" />
             )}
@@ -262,16 +286,19 @@ export default function StoreOrdersPage() {
           </Button>
         )}
 
-        {order.status === 'processing' && (
+        {order.status === "processing" && (
           <Button
             size="sm"
             variant="success"
-            onClick={() => handleStatusUpdate(orderId, 'ready')}
+            onClick={() => handleStatusUpdate(orderId, "ready")}
             disabled={isLoading}
             className="gap-1.5"
           >
             {isLoading ? (
-              <Spinner size="sm" className="border-current border-t-transparent" />
+              <Spinner
+                size="sm"
+                className="border-current border-t-transparent"
+              />
             ) : (
               <PackageCheck className="h-3.5 w-3.5" />
             )}
@@ -279,18 +306,21 @@ export default function StoreOrdersPage() {
           </Button>
         )}
 
-        {order.status === 'ready' && (
+        {order.status === "ready" && (
           <Button
             size="sm"
             variant="success"
             onClick={() => {
-              setOtpDialog({ open: true, order })
+              setOtpDialog({ open: true, order });
             }}
             disabled={isLoading}
             className="gap-1.5"
           >
             {isLoading ? (
-              <Spinner size="sm" className="border-current border-t-transparent" />
+              <Spinner
+                size="sm"
+                className="border-current border-t-transparent"
+              />
             ) : (
               <CheckCircle2 className="h-3.5 w-3.5" />
             )}
@@ -308,8 +338,8 @@ export default function StoreOrdersPage() {
           View
         </Button>
       </div>
-    )
-  }
+    );
+  };
 
   if (loading) {
     return (
@@ -319,7 +349,7 @@ export default function StoreOrdersPage() {
           <p className="text-muted-foreground text-sm">Loading orders...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -335,9 +365,11 @@ export default function StoreOrdersPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Order Management</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Order Management
+            </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              {orders.length} total order{orders.length !== 1 ? 's' : ''}
+              {orders.length} total order{orders.length !== 1 ? "s" : ""}
               {hasNewOrders && (
                 <span className="ml-2 inline-flex items-center gap-1 text-orange-600 font-medium">
                   <span className="relative flex h-2 w-2">
@@ -354,8 +386,8 @@ export default function StoreOrdersPage() {
           variant="outline"
           size="sm"
           onClick={() => {
-            setHasNewOrders(false)
-            fetchOrders()
+            setHasNewOrders(false);
+            fetchOrders();
           }}
           className="gap-2"
         >
@@ -368,16 +400,16 @@ export default function StoreOrdersPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => {
-          setActiveTab(v)
-          setHasNewOrders(false)
+          setActiveTab(v);
+          setHasNewOrders(false);
         }}
       >
         <TabsList className="w-full justify-start overflow-x-auto">
           {STATUS_TABS.map((tab) => {
             const count =
-              tab.value === 'all'
+              tab.value === "all"
                 ? orders.length
-                : orders.filter((o) => o.status === tab.value).length
+                : orders.filter((o) => o.status === tab.value).length;
             return (
               <TabsTrigger
                 key={tab.value}
@@ -391,7 +423,7 @@ export default function StoreOrdersPage() {
                   </span>
                 )}
               </TabsTrigger>
-            )
+            );
           })}
         </TabsList>
 
@@ -402,28 +434,32 @@ export default function StoreOrdersPage() {
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Clock className="h-12 w-12 text-muted-foreground/50 mb-3" />
                   <p className="text-muted-foreground">
-                    No {tab.value === 'all' ? '' : tab.label.toLowerCase() + ' '}orders found
+                    No{" "}
+                    {tab.value === "all" ? "" : tab.label.toLowerCase() + " "}
+                    orders found
                   </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
                 {sortedOrders.map((order) => {
-                  const items = order.items || []
-                  const orderId = order.id || order._id
-                  const customerRole = order.customer_role || order.customerRole
+                  const items = order.items || [];
+                  const orderId = order.id || order._id;
+                  const customerRole =
+                    order.customer_role || order.customerRole;
                   const customerIdentity =
-                    customerRole === 'student'
-                      ? order.customer_register_number || order.customerRegisterNumber
-                      : customerRole === 'faculty'
-                      ? order.customer_employee_id || order.customerEmployeeId
-                      : null
+                    customerRole === "student"
+                      ? order.customer_register_number ||
+                        order.customerRegisterNumber
+                      : customerRole === "faculty"
+                        ? order.customer_employee_id || order.customerEmployeeId
+                        : null;
                   const customerIdentityLabel =
-                    customerRole === 'student'
-                      ? 'Register Number'
-                      : customerRole === 'faculty'
-                      ? 'Employee ID'
-                      : null
+                    customerRole === "student"
+                      ? "Register Number"
+                      : customerRole === "faculty"
+                        ? "Employee ID"
+                        : null;
                   return (
                     <Card key={orderId} className="overflow-hidden">
                       <CardContent className="p-4 sm:p-5">
@@ -453,22 +489,26 @@ export default function StoreOrdersPage() {
 
                         {/* Customer name */}
                         <p className="text-sm">
-                          <span className="text-muted-foreground">Customer: </span>
+                          <span className="text-muted-foreground">
+                            Customer:{" "}
+                          </span>
                           <span className="font-medium">
-                            {order.customer_name || order.user_name || 'N/A'}
+                            {order.customer_name || order.user_name || "N/A"}
                           </span>
                         </p>
                         {customerIdentityLabel && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            {customerIdentityLabel}:{' '}
+                            {customerIdentityLabel}:{" "}
                             <span className="font-medium text-foreground">
-                              {customerIdentity || 'N/A'}
+                              {customerIdentity || "N/A"}
                             </span>
                           </p>
                         )}
-                        {(order.status === 'placed' || order.status === 'accepted') && (
+                        {(order.status === "placed" ||
+                          order.status === "accepted") && (
                           <p className="text-xs mt-1">
-                            {order.isCommitmentConfirmed || order.is_commitment_confirmed ? (
+                            {order.isCommitmentConfirmed ||
+                            order.is_commitment_confirmed ? (
                               <span className="text-emerald-700 font-medium">
                                 Commitment: Customer confirmed on the way
                               </span>
@@ -486,7 +526,9 @@ export default function StoreOrdersPage() {
                               Payment Ref
                             </p>
                             <p className="text-xs font-semibold break-all">
-                              {order.paymentReference || order.payment_reference || 'N/A'}
+                              {order.paymentReference ||
+                                order.payment_reference ||
+                                "N/A"}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 px-2.5 py-2">
@@ -494,7 +536,9 @@ export default function StoreOrdersPage() {
                               Transaction ID
                             </p>
                             <p className="text-xs font-semibold break-all tracking-wide">
-                              {order.transactionId || order.transaction_id || 'N/A'}
+                              {order.transactionId ||
+                                order.transaction_id ||
+                                "N/A"}
                             </p>
                           </div>
                         </div>
@@ -503,13 +547,18 @@ export default function StoreOrdersPage() {
                         {items.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {items.map((item, idx) => (
-                              <div key={idx} className="flex justify-between text-sm">
+                              <div
+                                key={idx}
+                                className="flex justify-between text-sm"
+                              >
                                 <span>
-                                  {item.quantity}x {item.name || item.menu_item_name}
+                                  {item.quantity}x{" "}
+                                  {item.name || item.menu_item_name}
                                 </span>
                                 <span className="text-muted-foreground">
                                   {formatCurrency(
-                                    (item.price_at_order || item.price) * item.quantity
+                                    (item.price_at_order || item.price) *
+                                      item.quantity,
                                   )}
                                 </span>
                               </div>
@@ -529,20 +578,22 @@ export default function StoreOrdersPage() {
                           </div>
                         )}
 
-                        {order.status === 'cancelled' &&
-                          (order.cancellationReason || order.cancellation_reason) && (
+                        {order.status === "cancelled" &&
+                          (order.cancellationReason ||
+                            order.cancellation_reason) && (
                             <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-800 flex items-start gap-1.5">
                               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                               <span>
                                 {getCancellationReasonLabel(
-                                  order.cancellationReason || order.cancellation_reason
+                                  order.cancellationReason ||
+                                    order.cancellation_reason,
                                 )}
                               </span>
                             </div>
                           )}
 
                         {/* OTP Display when ready */}
-                        {order.status === 'ready' && order.pickup_otp && (
+                        {order.status === "ready" && order.pickup_otp && (
                           <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-center">
                             <p className="text-xs font-medium text-green-800 mb-1">
                               Pickup OTP
@@ -557,12 +608,12 @@ export default function StoreOrdersPage() {
                         )}
 
                         {/* Actions */}
-                        {order.status !== 'picked_up' &&
-                          order.status !== 'cancelled' &&
+                        {order.status !== "picked_up" &&
+                          order.status !== "cancelled" &&
                           renderActions(order)}
                       </CardContent>
                     </Card>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -575,8 +626,8 @@ export default function StoreOrdersPage() {
         open={paymentDialog.open}
         onOpenChange={(open) => {
           if (!open) {
-            setPaymentDialog({ open: false, order: null })
-            setTransactionId('')
+            setPaymentDialog({ open: false, order: null });
+            setTransactionId("");
           }
         }}
       >
@@ -584,14 +635,21 @@ export default function StoreOrdersPage() {
           <DialogHeader>
             <DialogTitle>Confirm Payment</DialogTitle>
             <DialogDescription>
-              Order #{paymentDialog.order?.order_number || (paymentDialog.order?.id || paymentDialog.order?._id)?.slice(0, 8)}
-              {' - '}
+              Order #
+              {paymentDialog.order?.order_number ||
+                (paymentDialog.order?.id || paymentDialog.order?._id)?.slice(
+                  0,
+                  8,
+                )}
+              {" - "}
               {formatCurrency(paymentDialog.order?.total_amount || 0)}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm">Has the customer completed the UPI payment?</p>
+            <p className="text-sm">
+              Has the customer completed the UPI payment?
+            </p>
             <div className="space-y-2">
               <Label htmlFor="transactionId">Transaction ID (optional)</Label>
               <Input
@@ -601,9 +659,11 @@ export default function StoreOrdersPage() {
                 onChange={(e) => setTransactionId(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Payment Reference:{' '}
+                Payment Reference:{" "}
                 <span className="font-medium">
-                  {paymentDialog.order?.paymentReference || paymentDialog.order?.payment_reference || 'N/A'}
+                  {paymentDialog.order?.paymentReference ||
+                    paymentDialog.order?.payment_reference ||
+                    "N/A"}
                 </span>
               </p>
             </div>
@@ -612,22 +672,28 @@ export default function StoreOrdersPage() {
           <DialogFooter className="gap-2">
             <Button
               variant="destructive"
-              onClick={() => handlePaymentConfirm('failed')}
-              disabled={paymentLoading}
+              onClick={() => handlePaymentConfirm("failed")}
+              disabled={paymentLoading !== null}
             >
-              {paymentLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+              {paymentLoading === "failed" ? (
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <XCircle className="h-4 w-4 mr-1.5" />
               )}
               Mark Failed
             </Button>
             <Button
-              onClick={() => handlePaymentConfirm('success')}
-              disabled={paymentLoading}
+              onClick={() => handlePaymentConfirm("success")}
+              disabled={paymentLoading !== null}
             >
-              {paymentLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+              {paymentLoading === "success" ? (
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />
               )}
@@ -642,7 +708,7 @@ export default function StoreOrdersPage() {
         open={otpDialog.open}
         onOpenChange={(open) => {
           if (!open) {
-            setOtpDialog({ open: false, order: null })
+            setOtpDialog({ open: false, order: null });
           }
         }}
       >
@@ -650,8 +716,10 @@ export default function StoreOrdersPage() {
           <DialogHeader>
             <DialogTitle>Verify Pickup OTP</DialogTitle>
             <DialogDescription>
-              Order #{otpDialog.order?.order_number || (otpDialog.order?.id || otpDialog.order?._id)?.slice(0, 8)}
-              {' - '}
+              Order #
+              {otpDialog.order?.order_number ||
+                (otpDialog.order?.id || otpDialog.order?._id)?.slice(0, 8)}
+              {" - "}
               Ask the customer for their 6-digit pickup code.
             </DialogDescription>
           </DialogHeader>
@@ -670,10 +738,12 @@ export default function StoreOrdersPage() {
 
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">
-              Ask the student/faculty to show or say the OTP, then confirm pickup.
+              Ask the student/faculty to show or say the OTP, then confirm
+              pickup.
             </p>
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              No typing required. This will mark the order as picked up immediately.
+              No typing required. This will mark the order as picked up
+              immediately.
             </div>
           </div>
 
@@ -684,7 +754,10 @@ export default function StoreOrdersPage() {
               className="w-full gap-2"
             >
               {otpLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
@@ -694,5 +767,5 @@ export default function StoreOrdersPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -1,83 +1,115 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import api from '@/lib/api'
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import api from "@/lib/api";
 
-const verificationResultCache = new Map()
-const verificationRequestCache = new Map()
+const verificationResultCache = new Map();
+const verificationRequestCache = new Map();
+
+const SESSION_KEY = (token) => `email_verify:${token}`;
+
+const loadCachedResult = (token) => {
+  // In-memory first (same-tab, no reload)
+  if (verificationResultCache.has(token))
+    return verificationResultCache.get(token);
+  // Persisted across reloads (same tab via sessionStorage)
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY(token));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      verificationResultCache.set(token, parsed);
+      return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+};
+
+const persistResult = (token, result) => {
+  verificationResultCache.set(token, result);
+  if (result.status === "success") {
+    try {
+      sessionStorage.setItem(SESSION_KEY(token), JSON.stringify(result));
+    } catch {
+      // ignore quota errors
+    }
+  }
+};
 
 export default function VerifyEmailPage() {
-  const { token } = useParams()
+  const { token } = useParams();
 
-  const [status, setStatus] = useState('loading') // loading | success | error
-  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState("loading"); // loading | success | error
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
 
     const verifyEmail = async () => {
       if (!token) {
-        if (!isMounted) return
-        setStatus('error')
-        setMessage('Invalid verification link. No token was provided.')
-        return
+        if (!isMounted) return;
+        setStatus("error");
+        setMessage("Invalid verification link. No token was provided.");
+        return;
       }
 
-      if (verificationResultCache.has(token)) {
-        const cached = verificationResultCache.get(token)
-        if (!isMounted) return
-        setStatus(cached.status)
-        setMessage(cached.message)
-        return
+      const cached = loadCachedResult(token);
+      if (cached) {
+        if (!isMounted) return;
+        setStatus(cached.status);
+        setMessage(cached.message);
+        return;
       }
 
       try {
-        let request = verificationRequestCache.get(token)
+        let request = verificationRequestCache.get(token);
 
         if (!request) {
           request = api
             .post(`/auth/verify-email/${token}`)
             .then(({ data }) => ({
-              status: 'success',
-              message: data?.message || 'Your email has been verified successfully!',
+              status: "success",
+              message:
+                data?.message || "Your email has been verified successfully!",
             }))
             .catch((error) => ({
-              status: 'error',
+              status: "error",
               message:
                 error.response?.data?.message ||
-                'Email verification failed. The link may have expired or is invalid.',
+                "Email verification failed. The link may have expired or is invalid.",
             }))
             .finally(() => {
-              verificationRequestCache.delete(token)
-            })
+              verificationRequestCache.delete(token);
+            });
 
-          verificationRequestCache.set(token, request)
+          verificationRequestCache.set(token, request);
         }
 
-        const result = await request
-        verificationResultCache.set(token, result)
+        const result = await request;
+        persistResult(token, result);
 
-        if (!isMounted) return
-        setStatus(result.status)
-        setMessage(result.message)
+        if (!isMounted) return;
+        setStatus(result.status);
+        setMessage(result.message);
       } catch (error) {
-        if (!isMounted) return
-        setStatus('error')
+        if (!isMounted) return;
+        setStatus("error");
         setMessage(
           error.response?.data?.message ||
-            'Email verification failed. The link may have expired or is invalid.'
-        )
+            "Email verification failed. The link may have expired or is invalid.",
+        );
       }
-    }
+    };
 
-    verifyEmail()
+    verifyEmail();
 
     return () => {
-      isMounted = false
-    }
-  }, [token])
+      isMounted = false;
+    };
+  }, [token]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-transparent px-4 py-12">
@@ -87,81 +119,93 @@ export default function VerifyEmailPage() {
       </div>
 
       <div className="relative mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md items-center">
-      <div className="w-full">
-        {/* Logo / Branding */}
-        <div className="text-center mb-8">
-          <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">CampusBite</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Email Verification</p>
-        </div>
+        <div className="w-full">
+          {/* Logo / Branding */}
+          <div className="text-center mb-8">
+            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+              CampusBite
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Email Verification
+            </p>
+          </div>
 
-        <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="font-display text-2xl">Verify Your Email</CardTitle>
-          </CardHeader>
+          <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="font-display text-2xl">
+                Verify Your Email
+              </CardTitle>
+            </CardHeader>
 
-          <CardContent>
-            <div className="flex flex-col items-center text-center space-y-6 py-6">
-              {/* Loading state */}
-              {status === 'loading' && (
-                <>
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-                    <Loader2 className="h-8 w-8 text-orange-600 animate-spin" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Verifying your email...</p>
-                    <p className="text-sm text-muted-foreground">
-                      Please wait while we confirm your email address.
-                    </p>
-                  </div>
-                </>
-              )}
+            <CardContent>
+              <div className="flex flex-col items-center text-center space-y-6 py-6">
+                {/* Loading state */}
+                {status === "loading" && (
+                  <>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+                      <Loader2 className="h-8 w-8 text-orange-600 animate-spin" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">
+                        Verifying your email...
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Please wait while we confirm your email address.
+                      </p>
+                    </div>
+                  </>
+                )}
 
-              {/* Success state */}
-              {status === 'success' && (
-                <>
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Email Verified!</p>
-                    <p className="text-sm text-muted-foreground">{message}</p>
-                  </div>
-                  <Link to="/login">
-                    <Button size="lg">
-                      <span className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        Go to Login
-                      </span>
-                    </Button>
-                  </Link>
-                </>
-              )}
-
-              {/* Error state */}
-              {status === 'error' && (
-                <>
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                    <XCircle className="h-8 w-8 text-red-600" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Verification Failed</p>
-                    <p className="text-sm text-muted-foreground">{message}</p>
-                  </div>
-                  <div className="flex gap-3">
+                {/* Success state */}
+                {status === "success" && (
+                  <>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">
+                        Email Verified!
+                      </p>
+                      <p className="text-sm text-muted-foreground">{message}</p>
+                    </div>
                     <Link to="/login">
-                      <Button variant="outline">Go to Login</Button>
+                      <Button size="lg">
+                        <span className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Go to Login
+                        </span>
+                      </Button>
                     </Link>
-                    <Link to="/register">
-                      <Button>Register Again</Button>
-                    </Link>
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  </>
+                )}
+
+                {/* Error state */}
+                {status === "error" && (
+                  <>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                      <XCircle className="h-8 w-8 text-red-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">
+                        Verification Failed
+                      </p>
+                      <p className="text-sm text-muted-foreground">{message}</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Link to="/login">
+                        <Button variant="outline">Go to Login</Button>
+                      </Link>
+                      <Link to="/register">
+                        <Button>Register Again</Button>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
-  )
+  );
 }

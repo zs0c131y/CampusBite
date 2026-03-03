@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Clock,
@@ -12,15 +12,15 @@ import {
   PackageCheck,
   XCircle,
   AlertCircle,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Spinner } from '@/components/ui/spinner'
-import { DesktopHint } from '@/components/shared/DesktopHint'
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { DesktopHint } from "@/components/shared/DesktopHint";
 import {
   Dialog,
   DialogContent,
@@ -28,148 +28,167 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { usePolling } from '@/hooks/usePolling'
-import api from '@/lib/api'
-import { formatCurrency, formatDate, getCancellationReasonLabel } from '@/lib/utils'
+} from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { usePolling } from "@/hooks/usePolling";
+import api from "@/lib/api";
+import {
+  formatCurrency,
+  formatDate,
+  getCancellationReasonLabel,
+} from "@/lib/utils";
 
 const ORDER_TIMELINE = [
-  { status: 'placed', label: 'Order Placed', icon: Clock },
-  { status: 'accepted', label: 'Accepted', icon: CheckCircle2 },
-  { status: 'processing', label: 'Preparing', icon: ChefHat },
-  { status: 'ready', label: 'Ready for Pickup', icon: PackageCheck },
-  { status: 'picked_up', label: 'Picked Up', icon: CheckCircle2 },
-]
+  { status: "placed", label: "Order Placed", icon: Clock },
+  { status: "accepted", label: "Accepted", icon: CheckCircle2 },
+  { status: "processing", label: "Preparing", icon: ChefHat },
+  { status: "ready", label: "Ready for Pickup", icon: PackageCheck },
+  { status: "picked_up", label: "Picked Up", icon: CheckCircle2 },
+];
 
-const STATUS_ORDER = ['placed', 'accepted', 'processing', 'ready', 'picked_up']
+const STATUS_ORDER = ["placed", "accepted", "processing", "ready", "picked_up"];
 
 export default function OrderDetailPage() {
-  const { id } = useParams()
-  const hasLoadedRef = useRef(false)
+  const { id } = useParams();
+  const hasLoadedRef = useRef(false);
 
-  const [order, setOrder] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [actionLoading, setActionLoading] = useState(false)
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Payment dialog
-  const [paymentDialog, setPaymentDialog] = useState(false)
-  const [transactionId, setTransactionId] = useState('')
-  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentDialog, setPaymentDialog] = useState(false);
+  const [transactionId, setTransactionId] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(null); // 'success' | 'failed' | null
 
   // OTP dialog
-  const [otpDialog, setOtpDialog] = useState(false)
-  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpDialog, setOtpDialog] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
-  const fetchOrder = useCallback(async ({ silent = false } = {}) => {
-    const shouldShowLoader = !silent && !hasLoadedRef.current
-    try {
-      if (shouldShowLoader) {
-        setLoading(true)
+  const fetchOrder = useCallback(
+    async ({ silent = false } = {}) => {
+      const shouldShowLoader = !silent && !hasLoadedRef.current;
+      try {
+        if (shouldShowLoader) {
+          setLoading(true);
+        }
+        const res = await api.get(`/orders/${id}`);
+        setOrder(res.data.data.order || res.data.data);
+        setError(null);
+      } catch (err) {
+        if (!hasLoadedRef.current) {
+          setError(
+            err.response?.data?.message || "Failed to load order details.",
+          );
+        }
+      } finally {
+        if (!hasLoadedRef.current) {
+          setLoading(false);
+          hasLoadedRef.current = true;
+        }
       }
-      const res = await api.get(`/orders/${id}`)
-      setOrder(res.data.data.order || res.data.data)
-      setError(null)
-    } catch (err) {
-      if (!hasLoadedRef.current) {
-        setError(err.response?.data?.message || 'Failed to load order details.')
-      }
-    } finally {
-      if (!hasLoadedRef.current) {
-        setLoading(false)
-        hasLoadedRef.current = true
-      }
-    }
-  }, [id])
+    },
+    [id],
+  );
 
   useEffect(() => {
-    hasLoadedRef.current = false
-    setLoading(true)
-    setError(null)
-    setOrder(null)
-  }, [id])
+    hasLoadedRef.current = false;
+    setLoading(true);
+    setError(null);
+    setOrder(null);
+  }, [id]);
 
   const isPollingEnabled =
-    Boolean(id) && !['picked_up', 'cancelled'].includes(order?.status)
-  usePolling(() => fetchOrder({ silent: hasLoadedRef.current }), 2000, isPollingEnabled)
+    Boolean(id) && !["picked_up", "cancelled"].includes(order?.status);
+  usePolling(
+    () => fetchOrder({ silent: hasLoadedRef.current }),
+    2000,
+    isPollingEnabled,
+  );
 
   // Status update
   const handleStatusUpdate = async (newStatus) => {
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      const { data } = await api.patch(`/orders/${id}/status`, { status: newStatus })
-      toast.success(`Order status updated to ${newStatus}.`)
-      const updatedOrder = data?.data?.order
+      const { data } = await api.patch(`/orders/${id}/status`, {
+        status: newStatus,
+      });
+      toast.success(`Order status updated to ${newStatus}.`);
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        setOrder(updatedOrder)
+        setOrder(updatedOrder);
       } else {
-        await fetchOrder({ silent: true })
+        await fetchOrder({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update status.')
+      toast.error(err.response?.data?.message || "Failed to update status.");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   // Payment confirmation
   const handlePaymentConfirm = async (status) => {
-    setPaymentLoading(true)
+    setPaymentLoading(status);
     try {
       const { data } = await api.patch(`/orders/${id}/payment-status`, {
         paymentStatus: status,
         transactionId: transactionId || undefined,
-      })
+      });
       toast.success(
-        status === 'success' ? 'Payment confirmed.' : 'Payment marked as failed.'
-      )
-      setPaymentDialog(false)
-      setTransactionId('')
-      const updatedOrder = data?.data?.order
+        status === "success"
+          ? "Payment confirmed."
+          : "Payment marked as failed.",
+      );
+      setPaymentDialog(false);
+      setTransactionId("");
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        setOrder(updatedOrder)
+        setOrder(updatedOrder);
       } else {
-        await fetchOrder({ silent: true })
+        await fetchOrder({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update payment.')
+      toast.error(err.response?.data?.message || "Failed to update payment.");
     } finally {
-      setPaymentLoading(false)
+      setPaymentLoading(null);
     }
-  }
+  };
 
   const handleOtpVerify = async () => {
-    setOtpLoading(true)
+    setOtpLoading(true);
     try {
-      const { data } = await api.post(`/orders/${id}/verify-otp`, { manualConfirm: true })
-      toast.success('Pickup confirmed. Order completed.')
-      setOtpDialog(false)
-      const updatedOrder = data?.data?.order
+      const { data } = await api.post(`/orders/${id}/verify-otp`, {
+        manualConfirm: true,
+      });
+      toast.success("Pickup confirmed. Order completed.");
+      setOtpDialog(false);
+      const updatedOrder = data?.data?.order;
       if (updatedOrder) {
-        setOrder(updatedOrder)
+        setOrder(updatedOrder);
       } else {
-        await fetchOrder({ silent: true })
+        await fetchOrder({ silent: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'OTP verification failed.')
+      toast.error(err.response?.data?.message || "OTP verification failed.");
     } finally {
-      setOtpLoading(false)
+      setOtpLoading(false);
     }
-  }
+  };
 
   // Timeline step state
   const getStepState = (stepStatus) => {
-    if (!order) return 'upcoming'
-    if (order.status === 'cancelled') {
-      return stepStatus === 'placed' ? 'completed' : 'upcoming'
+    if (!order) return "upcoming";
+    if (order.status === "cancelled") {
+      return stepStatus === "placed" ? "completed" : "upcoming";
     }
-    const currentIdx = STATUS_ORDER.indexOf(order.status)
-    const stepIdx = STATUS_ORDER.indexOf(stepStatus)
-    if (stepIdx < currentIdx) return 'completed'
-    if (stepIdx === currentIdx) return 'current'
-    return 'upcoming'
-  }
+    const currentIdx = STATUS_ORDER.indexOf(order.status);
+    const stepIdx = STATUS_ORDER.indexOf(stepStatus);
+    if (stepIdx < currentIdx) return "completed";
+    if (stepIdx === currentIdx) return "current";
+    return "upcoming";
+  };
 
   if (loading) {
     return (
@@ -179,7 +198,7 @@ export default function OrderDetailPage() {
           <p className="text-muted-foreground text-sm">Loading order...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !order) {
@@ -189,7 +208,7 @@ export default function OrderDetailPage() {
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <AlertCircle className="h-12 w-12 text-destructive" />
             <p className="text-center text-muted-foreground">
-              {error || 'Order not found.'}
+              {error || "Order not found."}
             </p>
             <Button asChild>
               <Link to="/store/orders">Back to Orders</Link>
@@ -197,31 +216,33 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const items = order.items || []
-  const isPaid = order.payment_status === 'success'
-  const isTerminal = order.status === 'picked_up' || order.status === 'cancelled'
-  const customerRole = order.customer_role || order.customerRole || null
+  const items = order.items || [];
+  const isPaid = order.payment_status === "success";
+  const isTerminal =
+    order.status === "picked_up" || order.status === "cancelled";
+  const customerRole = order.customer_role || order.customerRole || null;
   const customerIdentityLabel =
-    customerRole === 'student'
-      ? 'Register Number'
-      : customerRole === 'faculty'
-      ? 'Employee ID'
-      : null
+    customerRole === "student"
+      ? "Register Number"
+      : customerRole === "faculty"
+        ? "Employee ID"
+        : null;
   const customerIdentityValue =
-    customerRole === 'student'
+    customerRole === "student"
       ? order.customer_register_number || order.customerRegisterNumber
-      : customerRole === 'faculty'
-      ? order.customer_employee_id || order.customerEmployeeId
-      : null
-  const cancellationReason = order.cancellationReason || order.cancellation_reason
-  const currentTimelineIdx = STATUS_ORDER.indexOf(order.status)
+      : customerRole === "faculty"
+        ? order.customer_employee_id || order.customerEmployeeId
+        : null;
+  const cancellationReason =
+    order.cancellationReason || order.cancellation_reason;
+  const currentTimelineIdx = STATUS_ORDER.indexOf(order.status);
   const timelineProgressPercent =
-    order.status === 'cancelled' || currentTimelineIdx < 0
+    order.status === "cancelled" || currentTimelineIdx < 0
       ? 0
-      : (currentTimelineIdx / (STATUS_ORDER.length - 1)) * 80
+      : (currentTimelineIdx / (STATUS_ORDER.length - 1)) * 80;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -255,22 +276,25 @@ export default function OrderDetailPage() {
         <CardContent>
           <div className="space-y-4 sm:hidden">
             {ORDER_TIMELINE.map((step, index) => {
-              const state = getStepState(step.status)
-              const Icon = step.icon
-              const showLine = index < ORDER_TIMELINE.length - 1
+              const state = getStepState(step.status);
+              const Icon = step.icon;
+              const showLine = index < ORDER_TIMELINE.length - 1;
 
               return (
-                <div key={step.status} className="relative flex items-start gap-3">
+                <div
+                  key={step.status}
+                  className="relative flex items-start gap-3"
+                >
                   {showLine && (
                     <div className="absolute left-4 top-8 h-8 w-0.5 bg-muted" />
                   )}
                   <div
                     className={`z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                      state === 'completed'
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : state === 'current'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-muted-foreground/30 bg-background text-muted-foreground/50'
+                      state === "completed"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : state === "current"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-muted-foreground/30 bg-background text-muted-foreground/50"
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -278,16 +302,16 @@ export default function OrderDetailPage() {
                   <div>
                     <p
                       className={`text-sm ${
-                        state === 'upcoming'
-                          ? 'text-muted-foreground/70'
-                          : 'font-medium text-foreground'
+                        state === "upcoming"
+                          ? "text-muted-foreground/70"
+                          : "font-medium text-foreground"
                       }`}
                     >
                       {step.label}
                     </p>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
 
@@ -300,8 +324,8 @@ export default function OrderDetailPage() {
 
             <div className="grid grid-cols-5">
               {ORDER_TIMELINE.map((step) => {
-                const state = getStepState(step.status)
-                const Icon = step.icon
+                const state = getStepState(step.status);
+                const Icon = step.icon;
                 return (
                   <div
                     key={step.status}
@@ -309,31 +333,31 @@ export default function OrderDetailPage() {
                   >
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
-                        state === 'completed'
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : state === 'current'
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-muted-foreground/30 bg-background text-muted-foreground/50'
+                        state === "completed"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : state === "current"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-muted-foreground/30 bg-background text-muted-foreground/50"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
                     <span
                       className={`mt-1.5 min-h-8 text-center text-[11px] leading-tight ${
-                        state === 'upcoming'
-                          ? 'text-muted-foreground/60'
-                          : 'font-medium text-foreground'
+                        state === "upcoming"
+                          ? "text-muted-foreground/60"
+                          : "font-medium text-foreground"
                       }`}
                     >
                       {step.label}
                     </span>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
 
-          {order.status === 'cancelled' && (
+          {order.status === "cancelled" && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-center">
               <p className="text-sm font-medium text-red-800">
                 This order has been cancelled.
@@ -349,7 +373,7 @@ export default function OrderDetailPage() {
       </Card>
 
       {/* OTP Display when ready */}
-      {order.status === 'ready' && order.pickup_otp && (
+      {order.status === "ready" && order.pickup_otp && (
         <Card className="border-green-200 bg-green-50/50">
           <CardContent className="py-6 text-center">
             <p className="text-sm font-medium text-green-800 mb-2">
@@ -375,7 +399,7 @@ export default function OrderDetailPage() {
             <div className="flex items-center gap-3">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {order.customer_name || order.user_name || 'N/A'}
+                {order.customer_name || order.user_name || "N/A"}
               </span>
             </div>
             {(order.customer_email || order.user_email) && (
@@ -398,8 +422,12 @@ export default function OrderDetailPage() {
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  <span className="text-muted-foreground">{customerIdentityLabel}: </span>
-                  <span className="font-medium">{customerIdentityValue || 'N/A'}</span>
+                  <span className="text-muted-foreground">
+                    {customerIdentityLabel}:{" "}
+                  </span>
+                  <span className="font-medium">
+                    {customerIdentityValue || "N/A"}
+                  </span>
                 </span>
               </div>
             )}
@@ -409,8 +437,8 @@ export default function OrderDetailPage() {
                 <span className="text-muted-foreground">Commitment: </span>
                 <span className="font-medium">
                   {order.isCommitmentConfirmed || order.is_commitment_confirmed
-                    ? 'Confirmed on the way'
-                    : 'Pending confirmation'}
+                    ? "Confirmed on the way"
+                    : "Pending confirmation"}
                 </span>
               </span>
             </div>
@@ -426,7 +454,7 @@ export default function OrderDetailPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Payment Ref</span>
               <span className="text-sm font-semibold break-all ml-3 text-right">
-                {order.paymentReference || order.payment_reference || 'N/A'}
+                {order.paymentReference || order.payment_reference || "N/A"}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -436,13 +464,17 @@ export default function OrderDetailPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Method</span>
               <span className="text-sm font-medium capitalize">
-                {order.payment_method || 'UPI'}
+                {order.payment_method || "UPI"}
               </span>
             </div>
             {order.transaction_id && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Transaction ID</span>
-                <span className="text-sm tracking-wide break-all ml-3 text-right">{order.transaction_id}</span>
+                <span className="text-sm text-muted-foreground">
+                  Transaction ID
+                </span>
+                <span className="text-sm tracking-wide break-all ml-3 text-right">
+                  {order.transaction_id}
+                </span>
               </div>
             )}
             <Separator />
@@ -488,7 +520,7 @@ export default function OrderDetailPage() {
                     </div>
                     <span className="text-sm font-medium">
                       {formatCurrency(
-                        (item.price_at_order || item.price) * item.quantity
+                        (item.price_at_order || item.price) * item.quantity,
                       )}
                     </span>
                   </div>
@@ -507,7 +539,9 @@ export default function OrderDetailPage() {
             <p className="text-xs font-medium text-yellow-800 mb-1">
               Special Instructions
             </p>
-            <p className="text-sm text-yellow-700">{order.special_instructions}</p>
+            <p className="text-sm text-yellow-700">
+              {order.special_instructions}
+            </p>
           </CardContent>
         </Card>
       )}
@@ -517,26 +551,30 @@ export default function OrderDetailPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex flex-wrap gap-3 justify-end">
-              {order.payment_status === 'pending' && (
-                <Button
-                  variant="warning"
-                  onClick={() => setPaymentDialog(true)}
-                  disabled={actionLoading}
-                  className="gap-2"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Confirm Payment
-                </Button>
-              )}
+              {order.status === "ready" &&
+                order.payment_status === "pending" && (
+                  <Button
+                    variant="warning"
+                    onClick={() => setPaymentDialog(true)}
+                    disabled={actionLoading}
+                    className="gap-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Confirm Payment
+                  </Button>
+                )}
 
-              {order.status === 'placed' && isPaid && (
+              {order.status === "placed" && (
                 <Button
-                  onClick={() => handleStatusUpdate('accepted')}
+                  onClick={() => handleStatusUpdate("accepted")}
                   disabled={actionLoading}
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" className="border-current border-t-transparent" />
+                    <Spinner
+                      size="sm"
+                      className="border-current border-t-transparent"
+                    />
                   ) : (
                     <CheckCircle2 className="h-4 w-4" />
                   )}
@@ -544,14 +582,17 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
-              {order.status === 'accepted' && (
+              {order.status === "accepted" && (
                 <Button
-                  onClick={() => handleStatusUpdate('processing')}
+                  onClick={() => handleStatusUpdate("processing")}
                   disabled={actionLoading}
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" className="border-current border-t-transparent" />
+                    <Spinner
+                      size="sm"
+                      className="border-current border-t-transparent"
+                    />
                   ) : (
                     <ChefHat className="h-4 w-4" />
                   )}
@@ -559,15 +600,18 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
-              {order.status === 'processing' && (
+              {order.status === "processing" && (
                 <Button
                   variant="success"
-                  onClick={() => handleStatusUpdate('ready')}
+                  onClick={() => handleStatusUpdate("ready")}
                   disabled={actionLoading}
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" className="border-current border-t-transparent" />
+                    <Spinner
+                      size="sm"
+                      className="border-current border-t-transparent"
+                    />
                   ) : (
                     <PackageCheck className="h-4 w-4" />
                   )}
@@ -575,17 +619,20 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
-              {order.status === 'ready' && (
+              {order.status === "ready" && (
                 <Button
                   variant="success"
                   onClick={() => {
-                    setOtpDialog(true)
+                    setOtpDialog(true);
                   }}
                   disabled={actionLoading}
                   className="gap-2"
                 >
                   {actionLoading ? (
-                    <Spinner size="sm" className="border-current border-t-transparent" />
+                    <Spinner
+                      size="sm"
+                      className="border-current border-t-transparent"
+                    />
                   ) : (
                     <CheckCircle2 className="h-4 w-4" />
                   )}
@@ -602,8 +649,8 @@ export default function OrderDetailPage() {
         open={paymentDialog}
         onOpenChange={(open) => {
           if (!open) {
-            setPaymentDialog(false)
-            setTransactionId('')
+            setPaymentDialog(false);
+            setTransactionId("");
           }
         }}
       >
@@ -611,13 +658,15 @@ export default function OrderDetailPage() {
           <DialogHeader>
             <DialogTitle>Confirm Payment</DialogTitle>
             <DialogDescription>
-              Order #{order.order_number || order.id?.slice(0, 8)} -{' '}
+              Order #{order.order_number || order.id?.slice(0, 8)} -{" "}
               {formatCurrency(order.total_amount || 0)}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm">Has the customer completed the UPI payment?</p>
+            <p className="text-sm">
+              Has the customer completed the UPI payment?
+            </p>
             <div className="space-y-2">
               <Label htmlFor="detail-txn-id">Transaction ID (optional)</Label>
               <Input
@@ -632,24 +681,30 @@ export default function OrderDetailPage() {
           <DialogFooter className="gap-2">
             <Button
               variant="destructive"
-              onClick={() => handlePaymentConfirm('failed')}
-              disabled={paymentLoading}
+              onClick={() => handlePaymentConfirm("failed")}
+              disabled={paymentLoading !== null}
               className="gap-1.5"
             >
-              {paymentLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+              {paymentLoading === "failed" ? (
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <XCircle className="h-4 w-4" />
               )}
               Mark Failed
             </Button>
             <Button
-              onClick={() => handlePaymentConfirm('success')}
-              disabled={paymentLoading}
+              onClick={() => handlePaymentConfirm("success")}
+              disabled={paymentLoading !== null}
               className="gap-1.5"
             >
-              {paymentLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+              {paymentLoading === "success" ? (
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
@@ -664,7 +719,7 @@ export default function OrderDetailPage() {
         open={otpDialog}
         onOpenChange={(open) => {
           if (!open) {
-            setOtpDialog(false)
+            setOtpDialog(false);
           }
         }}
       >
@@ -689,10 +744,12 @@ export default function OrderDetailPage() {
 
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">
-              Ask the student/faculty to show or say the OTP, then confirm pickup.
+              Ask the student/faculty to show or say the OTP, then confirm
+              pickup.
             </p>
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              No typing required. This will mark the order as picked up immediately.
+              No typing required. This will mark the order as picked up
+              immediately.
             </div>
           </div>
 
@@ -703,7 +760,10 @@ export default function OrderDetailPage() {
               className="w-full gap-2"
             >
               {otpLoading ? (
-                <Spinner size="sm" className="border-current border-t-transparent" />
+                <Spinner
+                  size="sm"
+                  className="border-current border-t-transparent"
+                />
               ) : (
                 <CheckCircle2 className="h-4 w-4" />
               )}
@@ -713,5 +773,5 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   Pencil,
@@ -8,16 +8,16 @@ import {
   ImageIcon,
   ArrowLeft,
   UtensilsCrossed,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
-import { Spinner } from '@/components/ui/spinner'
-import { DesktopHint } from '@/components/shared/DesktopHint'
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
+import { DesktopHint } from "@/components/shared/DesktopHint";
 import {
   Dialog,
   DialogContent,
@@ -25,77 +25,79 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
-import api from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
-import { formatCurrency } from '@/lib/utils'
-import { resolveMediaUrl } from '@/lib/media'
+} from "@/components/ui/dialog";
+import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency } from "@/lib/utils";
+import { resolveMediaUrl } from "@/lib/media";
 
 const EMPTY_FORM = {
-  name: '',
-  description: '',
-  price: '',
-  category: '',
+  name: "",
+  description: "",
+  price: "",
+  category: "",
   is_available: true,
   image: null,
-}
+};
 
 export default function MenuManagementPage() {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const [menuItems, setMenuItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   // Form dialog
-  const [formDialog, setFormDialog] = useState({ open: false, editing: null })
-  const [formData, setFormData] = useState(EMPTY_FORM)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [formLoading, setFormLoading] = useState(false)
-  const [formErrors, setFormErrors] = useState({})
+  const [formDialog, setFormDialog] = useState({ open: false, editing: null });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // Delete dialog
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null })
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Toggle loading
-  const [toggleLoading, setToggleLoading] = useState(null)
+  const [toggleLoading, setToggleLoading] = useState(null);
 
   const fetchData = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
 
       // Find user's store
-      const storesRes = await api.get('/stores')
-      const stores = storesRes.data.data.stores || []
+      const storesRes = await api.get("/stores");
+      const stores = storesRes.data.data.stores || [];
       const myStore = stores.find(
-        (s) => s.owner_id === user?.id || s.owner_name === user?.name
-      )
+        (s) => s.owner_id === user?.id || s.owner_name === user?.name,
+      );
 
       if (myStore) {
-        const storeId = myStore.id || myStore._id
-        const menuRes = await api.get(`/stores/${storeId}/menu`)
-        setMenuItems(menuRes.data.data.menuItems || [])
+        const storeId = myStore.id || myStore._id;
+        const menuRes = await api.get(`/stores/${storeId}/menu`);
+        setMenuItems(menuRes.data.data.menuItems || []);
       } else {
-        toast.error('Store not found. Please contact support.')
+        toast.error("Store not found. Please contact support.");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to load menu items.')
+      toast.error(err.response?.data?.message || "Failed to load menu items.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchData()
-  }, [user])
+    fetchData();
+  }, [user]);
 
   // Categories from existing items
   const categories = useMemo(() => {
-    const cats = new Set(menuItems.map((item) => item.category).filter(Boolean))
-    return Array.from(cats).sort()
-  }, [menuItems])
+    const cats = new Set(
+      menuItems.map((item) => item.category).filter(Boolean),
+    );
+    return Array.from(cats).sort();
+  }, [menuItems]);
 
   // Filtered items
   const filteredItems = useMemo(() => {
@@ -103,128 +105,133 @@ export default function MenuManagementPage() {
       const matchesSearch =
         !searchQuery ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = !categoryFilter || item.category === categoryFilter
-      return matchesSearch && matchesCategory
-    })
-  }, [menuItems, searchQuery, categoryFilter])
+        (item.description || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        !categoryFilter || item.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [menuItems, searchQuery, categoryFilter]);
 
   // Open form for add
   const handleOpenAdd = () => {
-    setFormData(EMPTY_FORM)
-    setImagePreview(null)
-    setFormErrors({})
-    setFormDialog({ open: true, editing: null })
-  }
+    setFormData(EMPTY_FORM);
+    setImagePreview(null);
+    setFormErrors({});
+    setFormDialog({ open: true, editing: null });
+  };
 
   // Open form for edit
   const handleOpenEdit = (item) => {
     setFormData({
-      name: item.name || '',
-      description: item.description || '',
-      price: item.price?.toString() || '',
-      category: item.category || '',
+      name: item.name || "",
+      description: item.description || "",
+      price: item.price?.toString() || "",
+      category: item.category || "",
       is_available: item.is_available ?? true,
       image: null,
-    })
-    setImagePreview(resolveMediaUrl(item.image_url || item.imageUrl || ''))
-    setFormErrors({})
-    setFormDialog({ open: true, editing: item })
-  }
+    });
+    setImagePreview(resolveMediaUrl(item.image_url || item.imageUrl || ""));
+    setFormErrors({});
+    setFormDialog({ open: true, editing: item });
+  };
 
   // Handle image change
   const handleImageChange = (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB.')
-        return
+        toast.error("Image size must be less than 5MB.");
+        return;
       }
-      setFormData((prev) => ({ ...prev, image: file }))
-      setImagePreview(URL.createObjectURL(file))
+      setFormData((prev) => ({ ...prev, image: file }));
+      setImagePreview(URL.createObjectURL(file));
     }
-  }
+  };
 
   // Validate form
   const validateForm = () => {
-    const errors = {}
-    if (!formData.name.trim()) errors.name = 'Name is required.'
+    const errors = {};
+    if (!formData.name.trim()) errors.name = "Name is required.";
     if (!formData.price || Number(formData.price) < 1)
-      errors.price = 'Price must be at least 1.'
-    if (isNaN(Number(formData.price))) errors.price = 'Price must be a number.'
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+      errors.price = "Price must be at least 1.";
+    if (isNaN(Number(formData.price))) errors.price = "Price must be a number.";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Save (add or edit)
   const handleSave = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setFormLoading(true)
+    setFormLoading(true);
     try {
-      const fd = new FormData()
-      fd.append('name', formData.name.trim())
-      fd.append('description', formData.description.trim())
-      fd.append('price', formData.price)
-      fd.append('category', formData.category.trim())
-      fd.append('is_available', formData.is_available)
+      const fd = new FormData();
+      fd.append("name", formData.name.trim());
+      fd.append("description", formData.description.trim());
+      fd.append("price", formData.price);
+      fd.append("category", formData.category.trim());
+      fd.append("is_available", formData.is_available);
       if (formData.image) {
-        fd.append('image', formData.image)
+        fd.append("image", formData.image);
       }
 
       if (formDialog.editing) {
-        const editingId = formDialog.editing.id || formDialog.editing._id
-        await api.put(`/menu/${editingId}`, fd)
-        toast.success('Menu item updated successfully.')
+        const editingId = formDialog.editing.id || formDialog.editing._id;
+        await api.put(`/menu/${editingId}`, fd);
+        toast.success("Menu item updated successfully.");
       } else {
-        await api.post('/menu', fd)
-        toast.success('Menu item added successfully.')
+        await api.post("/menu", fd);
+        toast.success("Menu item added successfully.");
       }
 
-      setFormDialog({ open: false, editing: null })
-      setFormData(EMPTY_FORM)
-      setImagePreview(null)
-      await fetchData()
+      setFormDialog({ open: false, editing: null });
+      setFormData(EMPTY_FORM);
+      setImagePreview(null);
+      await fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save menu item.')
+      toast.error(err.response?.data?.message || "Failed to save menu item.");
     } finally {
-      setFormLoading(false)
+      setFormLoading(false);
     }
-  }
+  };
 
   // Delete
   const handleDelete = async () => {
-    if (!deleteDialog.item) return
-    setDeleteLoading(true)
+    if (!deleteDialog.item) return;
+    setDeleteLoading(true);
     try {
-      const itemId = deleteDialog.item.id || deleteDialog.item._id
-      await api.delete(`/menu/${itemId}`)
-      toast.success('Menu item deleted successfully.')
-      setDeleteDialog({ open: false, item: null })
-      await fetchData()
+      const itemId = deleteDialog.item.id || deleteDialog.item._id;
+      await api.delete(`/menu/${itemId}`);
+      toast.success("Menu item deleted successfully.");
+      setDeleteDialog({ open: false, item: null });
+      await fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete menu item.')
+      toast.error(err.response?.data?.message || "Failed to delete menu item.");
     } finally {
-      setDeleteLoading(false)
+      setDeleteLoading(false);
     }
-  }
+  };
 
   // Toggle availability
   const handleToggleAvailability = async (item) => {
-    const itemId = item.id || item._id
-    setToggleLoading(itemId)
+    const itemId = item.id || item._id;
+    setToggleLoading(itemId);
     try {
-      await api.patch(`/menu/${itemId}/availability`)
+      await api.patch(`/menu/${itemId}/availability`);
       toast.success(
-        `${item.name} is now ${item.is_available ? 'unavailable' : 'available'}.`
-      )
-      await fetchData()
+        `${item.name} is now ${item.is_available ? "unavailable" : "available"}.`,
+      );
+      await fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to toggle availability.')
+      toast.error(
+        err.response?.data?.message || "Failed to toggle availability.",
+      );
     } finally {
-      setToggleLoading(null)
+      setToggleLoading(null);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -234,7 +241,7 @@ export default function MenuManagementPage() {
           <p className="text-muted-foreground text-sm">Loading menu...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -250,9 +257,11 @@ export default function MenuManagementPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Menu Management</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Menu Management
+            </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              {menuItems.length} item{menuItems.length !== 1 ? 's' : ''} total
+              {menuItems.length} item{menuItems.length !== 1 ? "s" : ""} total
             </p>
           </div>
         </div>
@@ -296,22 +305,24 @@ export default function MenuManagementPage() {
             <UtensilsCrossed className="h-12 w-12 text-muted-foreground/50 mb-3" />
             <p className="text-muted-foreground">
               {searchQuery || categoryFilter
-                ? 'No items match your search.'
-                : 'No menu items yet. Add your first item!'}
+                ? "No items match your search."
+                : "No menu items yet. Add your first item!"}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredItems.map((item) => {
-            const itemImage = resolveMediaUrl(item.image_url || item.imageUrl || '')
+            const itemImage = resolveMediaUrl(
+              item.image_url || item.imageUrl || "",
+            );
 
             return (
               <Card key={item.id || item._id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex items-stretch">
                     {/* Image */}
-                    <div className="w-28 sm:w-32 flex-shrink-0 bg-muted overflow-hidden self-stretch min-h-28 sm:min-h-32">
+                    <div className="w-28 sm:w-32 h-36 flex-shrink-0 bg-muted overflow-hidden">
                       {itemImage ? (
                         <img
                           src={itemImage}
@@ -354,11 +365,13 @@ export default function MenuManagementPage() {
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={item.is_available}
-                            onCheckedChange={() => handleToggleAvailability(item)}
+                            onCheckedChange={() =>
+                              handleToggleAvailability(item)
+                            }
                             disabled={toggleLoading === (item.id || item._id)}
                           />
                           <span className="text-xs text-muted-foreground">
-                            {item.is_available ? 'Available' : 'Unavailable'}
+                            {item.is_available ? "Available" : "Unavailable"}
                           </span>
                         </div>
                         <div className="flex gap-1">
@@ -374,7 +387,9 @@ export default function MenuManagementPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteDialog({ open: true, item })}
+                            onClick={() =>
+                              setDeleteDialog({ open: true, item })
+                            }
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -384,7 +399,7 @@ export default function MenuManagementPage() {
                   </div>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
       )}
@@ -394,22 +409,22 @@ export default function MenuManagementPage() {
         open={formDialog.open}
         onOpenChange={(open) => {
           if (!open) {
-            setFormDialog({ open: false, editing: null })
-            setFormData(EMPTY_FORM)
-            setImagePreview(null)
-            setFormErrors({})
+            setFormDialog({ open: false, editing: null });
+            setFormData(EMPTY_FORM);
+            setImagePreview(null);
+            setFormErrors({});
           }
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {formDialog.editing ? 'Edit Menu Item' : 'Add New Menu Item'}
+              {formDialog.editing ? "Edit Menu Item" : "Add New Menu Item"}
             </DialogTitle>
             <DialogDescription>
               {formDialog.editing
-                ? 'Update the details of this menu item.'
-                : 'Fill in the details to add a new item to your menu.'}
+                ? "Update the details of this menu item."
+                : "Fill in the details to add a new item to your menu."}
             </DialogDescription>
           </DialogHeader>
 
@@ -544,18 +559,22 @@ export default function MenuManagementPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setFormDialog({ open: false, editing: null })
-                setFormData(EMPTY_FORM)
-                setImagePreview(null)
-                setFormErrors({})
+                setFormDialog({ open: false, editing: null });
+                setFormData(EMPTY_FORM);
+                setImagePreview(null);
+                setFormErrors({});
               }}
               disabled={formLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={formLoading} className="gap-2">
+            <Button
+              onClick={handleSave}
+              disabled={formLoading}
+              className="gap-2"
+            >
               {formLoading && <Spinner size="sm" />}
-              {formDialog.editing ? 'Save Changes' : 'Add Item'}
+              {formDialog.editing ? "Save Changes" : "Add Item"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -565,15 +584,15 @@ export default function MenuManagementPage() {
       <Dialog
         open={deleteDialog.open}
         onOpenChange={(open) => {
-          if (!open) setDeleteDialog({ open: false, item: null })
+          if (!open) setDeleteDialog({ open: false, item: null });
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Menu Item</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{deleteDialog.item?.name}&rdquo;?
-              This action cannot be undone.
+              Are you sure you want to delete &ldquo;{deleteDialog.item?.name}
+              &rdquo;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -597,5 +616,5 @@ export default function MenuManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

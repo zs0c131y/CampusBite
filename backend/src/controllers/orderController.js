@@ -744,16 +744,6 @@ export const updatePaymentStatus = async (req, res, next) => {
 
     order.payment_status = paymentStatus;
 
-    if (paymentStatus === "success" && order.order_status === "placed") {
-      const trustTier = getUserTrustTier(order.user_id);
-      const requiresCommitment =
-        trustTier !== "good" ||
-        toSafeInt(order.user_id.no_show_count, 0) >= NO_SHOW_WARNING_THRESHOLD;
-
-      if (!requiresCommitment || order.is_commitment_confirmed) {
-        order.order_status = "accepted";
-      }
-    }
     if (paymentStatus === "failed") {
       order.order_status = "cancelled";
       order.cancelled_at = new Date();
@@ -823,14 +813,6 @@ export const updateOrderStatus = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to update this order.",
-      });
-    }
-
-    if (order.payment_status !== "success") {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Order status cannot be updated until payment is verified as successful.",
       });
     }
 
@@ -1108,21 +1090,17 @@ export const pollOrderStatus = async (req, res, next) => {
       const store = await Store.findOne({ owner_id: userId }).lean();
       // lean() keeps store_id as a raw ObjectId; String() handles both ObjectId and string
       if (!store || store._id.toString() !== String(order.store_id)) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message: "You are not authorized to view this order.",
-          });
-      }
-      // lean() keeps user_id as a raw ObjectId; String() handles both ObjectId and string
-    } else if (String(order.user_id) !== userId) {
-      return res
-        .status(403)
-        .json({
+        return res.status(403).json({
           success: false,
           message: "You are not authorized to view this order.",
         });
+      }
+      // lean() keeps user_id as a raw ObjectId; String() handles both ObjectId and string
+    } else if (String(order.user_id) !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view this order.",
+      });
     }
 
     res.json({ success: true, data: formatOrder(order) });

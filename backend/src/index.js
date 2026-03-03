@@ -72,9 +72,18 @@ app.use(
 app.use("/api/notifications", notificationRoutes);
 
 // Rate limiting
+//
+// Campus context: ~10 000 students on a shared campus WiFi — all traffic
+// originates from the same small pool of NAT-ted IPs. Pure IP-based limits
+// would fire constantly. Strategy:
+//   1. Global IP limiter — high ceiling, just blocks genuine floods.
+//   2. Auth IP limiter  — tighter, protects login/register/password flows.
+//   3. Order action limiter — keyed by authenticated USER ID so individual
+//      abuse is still caught while the shared IP never fires.
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 3000, // ~10k students sharing a few IPs — ceiling must be very high
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -84,10 +93,11 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
-// Auth-specific stricter rate limit
+// Auth-specific limit — per IP, but generous enough for a shared network.
+// Covers login / register / forgot-password / verify-email.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 80,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -96,6 +106,35 @@ const authLimiter = rateLimit({
   },
 });
 app.use("/api/auth/", authLimiter);
+
+// Order action limiter — keyed by USER ID (falls back to IP for unauthenticated
+// requests). This prevents a single user from spamming order actions while
+// keeping the shared campus IP from being the bottleneck.
+// NOTE: req.user isn't set yet at middleware registration time, so we decode
+// the JWT payload directly (no verification — just for bucketing, not auth).
+const orderActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300, // per user per 15 min — very generous for normal usage
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    try {
+      const token = (req.headers.authorization || "").replace("Bearer ", "");
+      if (token) {
+        const payload = JSON.parse(
+          Buffer.from(token.split(".")[1], "base64url").toString("utf8"),
+        );
+        if (payload?.id) return `user:${payload.id}`;
+      }
+    } catch {}
+    return req.ip;
+  },
+  message: {
+    success: false,
+    message: "Too many order actions. Please try again later.",
+  },
+});
+app.use("/api/orders/", orderActionLimiter);
 
 // Body parsing
 app.use(express.json({ limit: "1mb" }));
