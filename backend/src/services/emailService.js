@@ -1,14 +1,14 @@
-import { sendEmail } from '../config/email.js';
+import { sendEmail } from "../config/email.js";
 
 const escapeHtml = (str) =>
   String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 const baseStyles = `
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -95,7 +95,7 @@ export const sendVerificationEmail = async (email, name, token) => {
   `;
 
   const html = wrapTemplate(content);
-  await sendEmail(email, 'Verify Your CampusBite Account', html);
+  await sendEmail(email, "Verify Your CampusBite Account", html);
 };
 
 export const sendPasswordResetEmail = async (email, name, token) => {
@@ -119,7 +119,7 @@ export const sendPasswordResetEmail = async (email, name, token) => {
   `;
 
   const html = wrapTemplate(content);
-  await sendEmail(email, 'Reset Your CampusBite Password', html);
+  await sendEmail(email, "Reset Your CampusBite Password", html);
 };
 
 export const sendOrderConfirmation = async (email, name, order) => {
@@ -131,9 +131,9 @@ export const sendOrderConfirmation = async (email, name, order) => {
       <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${Number(item.quantity)}</td>
       <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">&#8377;${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
-  `
+  `,
     )
-    .join('');
+    .join("");
 
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Order Confirmed!</h2>
@@ -142,7 +142,7 @@ export const sendOrderConfirmation = async (email, name, order) => {
     </p>
     <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 15px 0;">
       <p style="margin: 0; color: #333;"><strong>Order Number:</strong> ${order.order_number}</p>
-      <p style="margin: 5px 0 0 0; color: #333;"><strong>Store:</strong> ${escapeHtml(order.store_name || 'N/A')}</p>
+      <p style="margin: 5px 0 0 0; color: #333;"><strong>Store:</strong> ${escapeHtml(order.store_name || "N/A")}</p>
     </div>
     <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
       <thead>
@@ -173,38 +173,43 @@ export const sendOrderConfirmation = async (email, name, order) => {
 
 export const sendOrderStatusUpdate = async (email, name, order, status) => {
   const statusMessages = {
-    accepted: 'Your order has been accepted by the store and payment has been confirmed.',
-    processing: 'Your order is now being prepared.',
-    ready: 'Your order is ready for pickup! Please collect it from the store.',
-    picked_up: 'Your order has been picked up. Enjoy your meal!',
-    cancelled: 'Your order has been cancelled.',
+    accepted:
+      "Your order has been accepted by the store and payment has been confirmed.",
+    processing: "Your order is now being prepared.",
+    ready: "Your order is ready for pickup! Please collect it from the store.",
+    picked_up: "Your order has been picked up. Enjoy your meal!",
+    cancelled: "Your order has been cancelled.",
   };
 
   const statusColors = {
-    accepted: '#4CAF50',
-    processing: '#2196F3',
-    ready: '#FF9800',
-    picked_up: '#8BC34A',
-    cancelled: '#F44336',
+    accepted: "#4CAF50",
+    processing: "#2196F3",
+    ready: "#FF9800",
+    picked_up: "#8BC34A",
+    cancelled: "#F44336",
   };
 
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Order Status Update</h2>
     <p style="color: #555555; line-height: 1.6;">Hi ${escapeHtml(name)},</p>
-    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${statusColors[status] || '#FF6B35'};">
+    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid ${statusColors[status] || "#FF6B35"};">
       <p style="margin: 0; color: #333;"><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>
       <p style="margin: 10px 0 0 0; color: #333;">
         <strong>Status:</strong>
-        <span style="color: ${statusColors[status] || '#FF6B35'}; font-weight: bold; text-transform: uppercase;">${escapeHtml(status.replace('_', ' '))}</span>
+        <span style="color: ${statusColors[status] || "#FF6B35"}; font-weight: bold; text-transform: uppercase;">${escapeHtml(status.replace("_", " "))}</span>
       </p>
     </div>
     <p style="color: #555555; line-height: 1.6;">
-      ${statusMessages[status] || 'Your order status has been updated.'}
+      ${statusMessages[status] || "Your order status has been updated."}
     </p>
   `;
 
   const html = wrapTemplate(content);
-  await sendEmail(email, `Order ${order.order_number} - ${status.replace('_', ' ').toUpperCase()}`, html);
+  await sendEmail(
+    email,
+    `Order ${order.order_number} - ${status.replace("_", " ").toUpperCase()}`,
+    html,
+  );
 };
 
 export const sendOtpEmail = async (email, name, otp, orderNumber) => {

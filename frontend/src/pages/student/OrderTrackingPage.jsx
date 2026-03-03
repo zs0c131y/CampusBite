@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,41 +11,43 @@ import {
   XCircle,
   AlertTriangle,
   Copy,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Spinner } from '@/components/ui/spinner'
-import api from '@/lib/api'
-import { usePolling } from '@/hooks/usePolling'
+  Wifi,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import api from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
+import { useNotifications } from "@/contexts/NotificationContext";
 import {
   formatCurrency,
   getCancellationReasonLabel,
   formatDate,
   getStatusColor,
   getStatusLabel,
-} from '@/lib/utils'
+} from "@/lib/utils";
 
 const ORDER_STEPS = [
-  { key: 'placed', label: 'Order Placed', icon: ShoppingBag },
-  { key: 'accepted', label: 'Accepted', icon: CheckCircle2 },
-  { key: 'processing', label: 'Preparing', icon: ChefHat },
-  { key: 'ready', label: 'Ready for Pickup', icon: Bell },
-  { key: 'picked_up', label: 'Picked Up', icon: Package },
-]
+  { key: "placed", label: "Order Placed", icon: ShoppingBag },
+  { key: "accepted", label: "Accepted", icon: CheckCircle2 },
+  { key: "processing", label: "Preparing", icon: ChefHat },
+  { key: "ready", label: "Ready for Pickup", icon: Bell },
+  { key: "picked_up", label: "Picked Up", icon: Package },
+];
 
 function OrderTimeline({ currentStatus }) {
-  const stepIndex = ORDER_STEPS.findIndex((s) => s.key === currentStatus)
-  const isCancelled = currentStatus === 'cancelled'
+  const stepIndex = ORDER_STEPS.findIndex((s) => s.key === currentStatus);
+  const isCancelled = currentStatus === "cancelled";
 
   return (
     <div className="relative">
       {ORDER_STEPS.map((step, idx) => {
-        const isCompleted = !isCancelled && idx <= stepIndex
-        const isCurrent = !isCancelled && idx === stepIndex
-        const StepIcon = step.icon
+        const isCompleted = !isCancelled && idx <= stepIndex;
+        const isCurrent = !isCancelled && idx === stepIndex;
+        const StepIcon = step.icon;
 
         return (
           <div key={step.key} className="flex items-start gap-3 relative">
@@ -53,9 +55,7 @@ function OrderTimeline({ currentStatus }) {
             {idx < ORDER_STEPS.length - 1 && (
               <div
                 className={`absolute left-[15px] top-[32px] w-0.5 h-[calc(100%-8px)] ${
-                  isCompleted && idx < stepIndex
-                    ? 'bg-green-500'
-                    : 'bg-muted'
+                  isCompleted && idx < stepIndex ? "bg-green-500" : "bg-muted"
                 }`}
               />
             )}
@@ -64,10 +64,10 @@ function OrderTimeline({ currentStatus }) {
             <div
               className={`shrink-0 w-[30px] h-[30px] rounded-full flex items-center justify-center z-10 ${
                 isCurrent
-                  ? 'bg-orange-600 text-white ring-4 ring-orange-100'
+                  ? "bg-orange-600 text-white ring-4 ring-orange-100"
                   : isCompleted
-                  ? 'bg-green-500 text-white'
-                  : 'bg-muted text-muted-foreground'
+                    ? "bg-green-500 text-white"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {isCompleted && !isCurrent ? (
@@ -78,14 +78,16 @@ function OrderTimeline({ currentStatus }) {
             </div>
 
             {/* Label */}
-            <div className={`pb-8 ${idx === ORDER_STEPS.length - 1 ? 'pb-0' : ''}`}>
+            <div
+              className={`pb-8 ${idx === ORDER_STEPS.length - 1 ? "pb-0" : ""}`}
+            >
               <p
                 className={`text-sm font-medium ${
                   isCurrent
-                    ? 'text-orange-600'
+                    ? "text-orange-600"
                     : isCompleted
-                    ? 'text-foreground'
-                    : 'text-muted-foreground'
+                      ? "text-foreground"
+                      : "text-muted-foreground"
                 }`}
               >
                 {step.label}
@@ -97,7 +99,7 @@ function OrderTimeline({ currentStatus }) {
               )}
             </div>
           </div>
-        )
+        );
       })}
 
       {/* Cancelled state */}
@@ -115,42 +117,42 @@ function OrderTimeline({ currentStatus }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function OtpDisplay({ otp, expiresAt }) {
-  const [timeLeft, setTimeLeft] = useState('')
-  const intervalRef = useRef(null)
+  const [timeLeft, setTimeLeft] = useState("");
+  const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!expiresAt) return
+    if (!expiresAt) return;
 
     const updateTimer = () => {
-      const now = new Date()
-      const expiry = new Date(expiresAt)
-      const diff = Math.max(0, Math.floor((expiry - now) / 1000))
+      const now = new Date();
+      const expiry = new Date(expiresAt);
+      const diff = Math.max(0, Math.floor((expiry - now) / 1000));
 
       if (diff <= 0) {
-        setTimeLeft('Expired')
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        return
+        setTimeLeft("Expired");
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
       }
 
-      const minutes = Math.floor(diff / 60)
-      const seconds = diff % 60
-      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`)
-    }
+      const minutes = Math.floor(diff / 60);
+      const seconds = diff % 60;
+      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, "0")}`);
+    };
 
-    updateTimer()
-    intervalRef.current = setInterval(updateTimer, 1000)
+    updateTimer();
+    intervalRef.current = setInterval(updateTimer, 1000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [expiresAt])
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [expiresAt]);
 
-  if (!otp) return null
+  if (!otp) return null;
 
-  const digits = otp.toString().split('')
+  const digits = otp.toString().split("");
 
   return (
     <Card className="border-2 border-orange-200 bg-orange-50/50">
@@ -181,7 +183,9 @@ function OtpDisplay({ otp, expiresAt }) {
           <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>
-              {timeLeft === 'Expired' ? 'OTP expired' : `Expires in ${timeLeft}`}
+              {timeLeft === "Expired"
+                ? "OTP expired"
+                : `Expires in ${timeLeft}`}
             </span>
           </div>
         )}
@@ -194,8 +198,8 @@ function OtpDisplay({ otp, expiresAt }) {
           onClick={() => {
             navigator.clipboard
               .writeText(otp.toString())
-              .then(() => toast.success('OTP copied!'))
-              .catch(() => toast.error('Failed to copy'))
+              .then(() => toast.success("OTP copied!"))
+              .catch(() => toast.error("Failed to copy"));
           }}
         >
           <Copy className="h-3 w-3 mr-1" />
@@ -203,48 +207,58 @@ function OtpDisplay({ otp, expiresAt }) {
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default function OrderTrackingPage() {
-  const { id: orderId } = useParams()
-  const navigate = useNavigate()
+  const { id: orderId } = useParams();
+  const navigate = useNavigate();
+  const { latestOrderEvent, connected } = useNotifications();
 
-  const [order, setOrder] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [commitmentLoading, setCommitmentLoading] = useState(false)
-  const hasLoadedOrderRef = useRef(false)
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [commitmentLoading, setCommitmentLoading] = useState(false);
+  const hasLoadedOrderRef = useRef(false);
 
   const isActive =
-    !order || !['picked_up', 'cancelled'].includes(order.orderStatus || order.status)
+    !order ||
+    !["picked_up", "cancelled"].includes(order.orderStatus || order.status);
 
   const fetchOrder = useCallback(async () => {
     try {
-      const { data } = await api.get(`/orders/${orderId}`)
+      const { data } = await api.get(`/orders/${orderId}`);
       if (data.success) {
-        setOrder(data.data)
-        setError(null)
-        hasLoadedOrderRef.current = true
+        setOrder(data.data);
+        setError(null);
+        hasLoadedOrderRef.current = true;
       }
     } catch (err) {
       if (!hasLoadedOrderRef.current) {
-        setError('Failed to load order details.')
+        setError("Failed to load order details.");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [orderId])
+  }, [orderId]);
 
-  // Poll for updates on active orders
-  usePolling(fetchOrder, 2500, isActive)
+  // React to real-time SSE events for this specific order
+  useEffect(() => {
+    if (!latestOrderEvent) return;
+    if (latestOrderEvent.data?.orderId !== orderId) return;
+    // Refetch the full order to get updated state
+    fetchOrder();
+  }, [latestOrderEvent, orderId, fetchOrder]);
+
+  // Polling as fallback — reduced to 8 s when SSE is active
+  usePolling(fetchOrder, connected ? 8000 : 2500, isActive);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
         <Spinner size="lg" />
       </div>
-    )
+    );
   }
 
   if (error || !order) {
@@ -254,42 +268,46 @@ export default function OrderTrackingPage() {
           <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Order not found</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            {error || 'The order you are looking for could not be found.'}
+            {error || "The order you are looking for could not be found."}
           </p>
-          <Button onClick={() => navigate('/orders')}>
+          <Button onClick={() => navigate("/orders")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Orders
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  const orderStatus = order.orderStatus || order.status
-  const paymentStatus = order.paymentStatus || order.payment_status
-  const cancellationReason = order.cancellationReason || order.cancellation_reason
+  const orderStatus = order.orderStatus || order.status;
+  const paymentStatus = order.paymentStatus || order.payment_status;
+  const cancellationReason =
+    order.cancellationReason || order.cancellation_reason;
   const commitmentDeadline =
-    order.commitmentDeadlineAt || order.commitment_deadline_at
+    order.commitmentDeadlineAt || order.commitment_deadline_at;
   const needsCommitmentConfirmation =
-    paymentStatus === 'success' &&
-    orderStatus === 'placed' &&
+    paymentStatus === "success" &&
+    orderStatus === "placed" &&
     !order.isCommitmentConfirmed &&
-    !order.is_commitment_confirmed
+    !order.is_commitment_confirmed;
 
   const handleConfirmCommitment = async () => {
-    setCommitmentLoading(true)
+    setCommitmentLoading(true);
     try {
-      const { data } = await api.post(`/orders/${orderId}/confirm-commitment`)
+      const { data } = await api.post(`/orders/${orderId}/confirm-commitment`);
       if (data.success) {
-        setOrder(data.data.order || data.data)
-        toast.success(data.message || 'Commitment confirmed.')
+        setOrder(data.data.order || data.data);
+        toast.success(data.message || "Commitment confirmed.");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Unable to confirm commitment right now.')
+      toast.error(
+        err.response?.data?.message ||
+          "Unable to confirm commitment right now.",
+      );
     } finally {
-      setCommitmentLoading(false)
+      setCommitmentLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -299,7 +317,7 @@ export default function OrderTrackingPage() {
           variant="ghost"
           size="sm"
           className="mb-4 -ml-2"
-          onClick={() => navigate('/orders')}
+          onClick={() => navigate("/orders")}
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Orders
@@ -322,13 +340,28 @@ export default function OrderTrackingPage() {
           </div>
           {order.storeName && (
             <p className="text-muted-foreground mt-1 text-sm">
-              From <span className="font-medium text-foreground">{order.storeName}</span>
+              From{" "}
+              <span className="font-medium text-foreground">
+                {order.storeName}
+              </span>
             </p>
+          )}
+          {isActive && (
+            <div
+              className={`inline-flex items-center gap-1.5 mt-2 text-xs font-medium px-2 py-1 rounded-full w-fit ${
+                connected
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              <Wifi className="h-3 w-3" />
+              {connected ? "Live updates active" : "Reconnecting…"}
+            </div>
           )}
         </div>
 
         {/* OTP Section (when order is ready) */}
-        {orderStatus === 'ready' && (
+        {orderStatus === "ready" && (
           <div className="mb-6">
             <OtpDisplay
               otp={order.otp || order.pickupOtp || order.pickup_otp}
@@ -354,11 +387,16 @@ export default function OrderTrackingPage() {
                 Confirm you are on the way
               </p>
               <p className="text-xs text-orange-800">
-                This helps the store avoid no-show waste. Your order may not be accepted until confirmed.
+                This helps the store avoid no-show waste. Your order may not be
+                accepted until confirmed.
               </p>
               {commitmentDeadline && (
                 <p className="text-xs text-orange-800">
-                  Confirm by <span className="font-semibold">{formatDate(commitmentDeadline)}</span> to avoid auto-cancellation.
+                  Confirm by{" "}
+                  <span className="font-semibold">
+                    {formatDate(commitmentDeadline)}
+                  </span>{" "}
+                  to avoid auto-cancellation.
                 </p>
               )}
               <Button
@@ -367,7 +405,10 @@ export default function OrderTrackingPage() {
                 className="w-full gap-2"
               >
                 {commitmentLoading ? (
-                  <Spinner size="sm" className="border-current border-t-transparent" />
+                  <Spinner
+                    size="sm"
+                    className="border-current border-t-transparent"
+                  />
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
@@ -377,10 +418,12 @@ export default function OrderTrackingPage() {
           </Card>
         )}
 
-        {orderStatus === 'cancelled' && cancellationReason && (
+        {orderStatus === "cancelled" && cancellationReason && (
           <Card className="mb-6 border-red-200 bg-red-50/70">
             <CardContent className="p-4">
-              <p className="text-sm font-semibold text-red-900">Cancellation Reason</p>
+              <p className="text-sm font-semibold text-red-900">
+                Cancellation Reason
+              </p>
               <p className="text-xs text-red-800 mt-1">
                 {getCancellationReasonLabel(cancellationReason)}
               </p>
@@ -414,7 +457,9 @@ export default function OrderTrackingPage() {
 
             <div className="flex justify-between font-semibold text-base">
               <span>Total</span>
-              <span>{formatCurrency(order.totalAmount || order.total_amount)}</span>
+              <span>
+                {formatCurrency(order.totalAmount || order.total_amount)}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -454,5 +499,5 @@ export default function OrderTrackingPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

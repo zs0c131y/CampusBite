@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
+import { NotificationBell } from '@/components/shared/NotificationBell'
 import { Button } from '@/components/ui/button'
 
 export function Navbar() {
@@ -86,7 +87,8 @@ export function Navbar() {
                     <span>Settings</span>
                   </Link>
                 </Button>
-                {/* Profile Dropdown */}
+                <NotificationBell />
+                {/* Profile Dropdown */}}
                 <div className="relative">
                   <Button
                     variant="ghost"
@@ -157,6 +159,7 @@ export function Navbar() {
                     )}
                   </Link>
                 </Button>
+                <NotificationBell />
                 {/* Profile Dropdown */}
                 <div className="relative">
                   <Button
@@ -218,6 +221,7 @@ export function Navbar() {
                 </Link>
               </Button>
             )}
+            {isAuthenticated && <NotificationBell />}
             <Button
               variant="ghost"
               size="icon"

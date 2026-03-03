@@ -18,6 +18,7 @@ import storeRoutes from "./routes/storeRoutes.js";
 import menuRoutes from "./routes/menuRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import { uploadsDir, uploadsPublicPath } from "./config/uploads.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +65,11 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
+// SSE notification subscription — registered before the rate limiter because
+// each SSE connection is a persistent, long-lived HTTP request and must not
+// compete with the per-IP request budget.
+app.use("/api/notifications", notificationRoutes);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -121,6 +127,7 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
+// notification route is already mounted above the rate limiter
 
 if (isProduction) {
   const frontendDistPath = path.join(__dirname, "../../frontend/dist");
