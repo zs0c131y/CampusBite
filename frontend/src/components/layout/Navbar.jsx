@@ -36,7 +36,7 @@ export function Navbar() {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/88 shadow-[0_14px_28px_-26px_rgba(32,23,15,0.85)] backdrop-blur-md supports-[backdrop-filter]:bg-background/78">
+    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/88 shadow-[0_14px_28px_-26px_rgba(32,23,15,0.85)] backdrop-blur-md supports-[backdrop-filter]:bg-background/78 [padding-top:env(safe-area-inset-top)]">    
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}

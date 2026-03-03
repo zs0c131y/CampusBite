@@ -1,16 +1,50 @@
 {
-  "id": "/",
+  "id": "campusbite-app",
   "name": "CampusBite",
   "short_name": "CampusBite",
   "description": "Campus food ordering with real-time order tracking and pickup OTP.",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#fffcf7",
   "theme_color": "#9a4208",
   "categories": ["food", "productivity", "lifestyle"],
   "lang": "en-IN",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "shortcuts": [
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View your current and past orders",
+      "url": "/student/orders?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Browse Menu",
+      "short_name": "Menu",
+      "description": "Browse available stores and food items",
+      "url": "/student/home?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "CampusBite home screen"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",

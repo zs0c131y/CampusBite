@@ -42,6 +42,9 @@
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* Prevent bounce/overscroll for native app feel */
+    overscroll-behavior: none;
+    height: 100%;
   }
 
   body {
@@ -56,6 +59,16 @@
     background-image: radial-gradient(circle at 10% 5%, rgb(251 191 36 / 0.12), transparent 35%),
       radial-gradient(circle at 92% 95%, rgb(249 115 22 / 0.1), transparent 30%);
     min-height: 100vh;
+    min-height: 100dvh;
+    /* Respect safe-area insets for bottom/sides (notch / dynamic island) */
+    /* Note: top inset is handled by the sticky navbar so its bg fills behind the status bar */
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Remove tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent pull-to-refresh */
+    overscroll-behavior-y: none;
   }
 
   h1,

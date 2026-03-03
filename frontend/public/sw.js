@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'campusbite-shell-v1';
-const RUNTIME_CACHE = 'campusbite-runtime-v1';
+const SHELL_CACHE = 'campusbite-shell-v2';
+const RUNTIME_CACHE = 'campusbite-runtime-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
