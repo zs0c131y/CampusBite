@@ -5,6 +5,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 // ── Auth stack ────────────────────────────────────────────────────────────────
 
 export type AuthStackParamList = {
+  Landing: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
@@ -62,6 +63,7 @@ export type RootStackParamList = {
 
 // ── Screen prop types ─────────────────────────────────────────────────────────
 
+export type LandingScreenProps = NativeStackScreenProps<AuthStackParamList, 'Landing'>;
 export type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 export type ForgotPasswordScreenProps = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;

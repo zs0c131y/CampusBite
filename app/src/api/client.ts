@@ -3,6 +3,10 @@ import { clearAuthData, getAccessToken, getRefreshToken, saveTokens } from '@/st
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:5000/api';
 
+// Server root (strips any path after the host) — used to resolve relative upload URLs like /uploads/...
+// Uses regex instead of new URL() to avoid Hermes/RN polyfill issues at module init time.
+export const SERVER_URL = BASE_URL.match(/^https?:\/\/[^/]*/)?.[0] ?? '';
+
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },

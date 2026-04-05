@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native';
-import { Text, Searchbar, useTheme, Surface, Chip, ActivityIndicator } from 'react-native-paper';
+import { View, FlatList, StyleSheet, Pressable, RefreshControl, TextInput } from 'react-native';
+import { Text, useTheme, Surface, ActivityIndicator } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInRight, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { storesApi } from '@/api/stores';
 import { ordersApi } from '@/api/orders';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Store, Order } from '@/api/types';
 import type { StudentStackParamList } from '@/navigation/types';
-import { getGreeting, formatOperatingHours, isActiveOrder } from '@/utils';
+import { getGreeting } from '@/utils';
 import StoreCard from '@/components/StoreCard';
 import { spacing, radius } from '@/theme';
 
@@ -60,83 +63,127 @@ export default function HomeScreen() {
 
   const c = theme.colors;
 
+  // User initials avatar
+  const initials = user?.name
+    ? user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      {/* Header */}
-      <Animated.View
-        entering={FadeInDown.delay(0).springify()}
-        style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}
+      <StatusBar style="dark" />
+      {/* Header with gradient */}
+      <LinearGradient
+        colors={[c.primaryContainer + 'CC', c.background]}
+        locations={[0, 1]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
       >
-        <View style={styles.greetRow}>
-          <View style={{ flex: 1 }}>
-            <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant }}>
-              {greeting.emoji} {greeting.text}
-            </Text>
-            <Text variant="titleLarge" style={[styles.greetName, { color: c.onSurface }]}>
-              What are you craving?
-            </Text>
+        <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.header}>
+          {/* Top row: greeting + avatar */}
+          <View style={styles.topRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.greetLine, { color: c.onSurfaceVariant }]}>
+                {greeting.emoji}  {greeting.text}
+              </Text>
+              <Text style={[styles.tagline, { color: c.onSurface }]}>
+                What are you craving?
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('Profile')}
+              style={[styles.avatar, { backgroundColor: c.primary }]}
+            >
+              <Text style={[styles.avatarText, { color: c.onPrimary }]}>{initials}</Text>
+            </Pressable>
           </View>
-        </View>
-        <Searchbar
-          placeholder="Search stores…"
-          value={search}
-          onChangeText={setSearch}
-          style={[styles.searchbar, { backgroundColor: c.surfaceVariant }]}
-          inputStyle={{ color: c.onSurface }}
-          iconColor={c.onSurfaceVariant}
-          elevation={0}
-        />
-      </Animated.View>
+
+          {/* Search */}
+          <View style={[styles.searchbar, { backgroundColor: c.elevation.level3, borderColor: c.outlineVariant }]}>
+            <MaterialCommunityIcons name="magnify" size={20} color={c.onSurfaceVariant} />
+            <View style={styles.searchInputWrap}>
+              {search.length === 0 && (
+                <Text style={[styles.searchPlaceholder, { color: c.onSurfaceVariant }]} pointerEvents="none">
+                  Search canteens…
+                </Text>
+              )}
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                style={[styles.searchInput, { color: c.onSurface }]}
+                returnKeyType="search"
+              />
+            </View>
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                <MaterialCommunityIcons name="close-circle" size={18} color={c.onSurfaceVariant} />
+              </Pressable>
+            )}
+          </View>
+        </Animated.View>
+      </LinearGradient>
 
       <FlatList
         data={filtered}
         keyExtractor={(s) => s._id}
         numColumns={1}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.primary]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.primary]}
+            tintColor={c.primary}
+          />
+        }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingTop: 8 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingTop: spacing.md }}
         ListHeaderComponent={
           <>
             {/* Active order banner */}
             {activeOrders.length > 0 && (
-              <Animated.View entering={FadeInDown.delay(100).springify()} style={{ paddingHorizontal: spacing.base, marginBottom: spacing.md }}>
+              <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.bannerWrap}>
                 <Pressable onPress={() => navigation.navigate('OrderTracking', { orderId: activeOrders[0]._id })}>
-                  <Surface style={[styles.activeBanner, { backgroundColor: c.primaryContainer }]} elevation={0}>
-                    <Text style={{ fontSize: 20 }}>🍱</Text>
+                  <LinearGradient
+                    colors={[c.primary, c.secondary ?? c.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.activeBanner}
+                  >
+                    <Text style={{ fontSize: 22 }}>🍱</Text>
                     <View style={{ flex: 1 }}>
-                      <Text variant="labelLarge" style={{ color: c.onPrimaryContainer, fontWeight: '700' }}>
+                      <Text style={[styles.bannerTitle, { color: c.onPrimary }]}>
                         {activeOrders.length} active order{activeOrders.length > 1 ? 's' : ''}
                       </Text>
-                      <Text variant="bodySmall" style={{ color: c.onPrimaryContainer, opacity: 0.8 }}>
-                        Tap to track
+                      <Text style={[styles.bannerSub, { color: c.onPrimary + 'CC' }]}>
+                        Tap to track your food
                       </Text>
                     </View>
-                    <Text style={{ color: c.primary, fontSize: 18 }}>→</Text>
-                  </Surface>
+                    <View style={[styles.bannerChevron, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                      <Text style={{ color: c.onPrimary, fontSize: 14, fontWeight: '700' }}>→</Text>
+                    </View>
+                  </LinearGradient>
                 </Pressable>
               </Animated.View>
             )}
 
             {/* Restriction warning */}
             {user?.trust_tier === 'restricted' && (
-              <Animated.View entering={FadeInDown.duration(250)} style={{ paddingHorizontal: spacing.base, marginBottom: spacing.md }}>
+              <Animated.View entering={FadeInDown.duration(250)} style={styles.bannerWrap}>
                 <Surface style={[styles.warnBanner, { backgroundColor: c.errorContainer }]} elevation={0}>
                   <Text style={{ fontSize: 18 }}>⛔</Text>
-                  <Text variant="bodySmall" style={{ color: c.onErrorContainer, flex: 1, marginLeft: spacing.sm }}>
+                  <Text style={[styles.warnText, { color: c.onErrorContainer }]}>
                     Ordering restricted due to no-shows. This will lift automatically.
                   </Text>
                 </Surface>
               </Animated.View>
             )}
 
-            {/* Section title */}
+            {/* Section header */}
             <View style={[styles.sectionRow, { paddingHorizontal: spacing.base }]}>
-              <Text variant="titleMedium" style={{ color: c.onSurface, fontWeight: '700' }}>
-                🏪 Campus Stores
-              </Text>
-              <Text variant="bodySmall" style={{ color: c.onSurfaceVariant }}>
-                {filtered.length} available
-              </Text>
+              <View>
+                <Text style={[styles.sectionTitle, { color: c.onSurface }]}>Campus Stores</Text>
+                <Text style={[styles.sectionSub, { color: c.onSurfaceVariant }]}>
+                  {filtered.length} outlet{filtered.length !== 1 ? 's' : ''} available
+                </Text>
+              </View>
             </View>
           </>
         }
@@ -144,15 +191,15 @@ export default function HomeScreen() {
           loading ? (
             <View style={styles.loadingCenter}>
               <ActivityIndicator size="large" color={c.primary} />
-              <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant, marginTop: spacing.md }}>
+              <Text style={[styles.loadingText, { color: c.onSurfaceVariant }]}>
                 Loading stores…
               </Text>
             </View>
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text variant="titleMedium" style={{ color: c.onSurface, fontWeight: '600' }}>No stores found</Text>
-              <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant, marginTop: 4 }}>
+              <Text style={[styles.emptyTitle, { color: c.onSurface }]}>No stores found</Text>
+              <Text style={[styles.emptySub, { color: c.onSurfaceVariant }]}>
                 {search ? `Nothing matches "${search}"` : 'No food outlets available right now.'}
               </Text>
             </View>
@@ -177,14 +224,73 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: spacing.base, paddingBottom: spacing.md },
-  greetRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  greetName: { fontWeight: '700', marginTop: 2 },
-  searchbar: { borderRadius: radius.lg },
-  activeBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.lg, padding: spacing.md },
-  warnBanner: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.lg, padding: spacing.md },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  headerGradient: { paddingBottom: spacing.md },
+  header: { paddingHorizontal: spacing.base, paddingTop: spacing.md },
+  topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.base },
+  greetLine: { fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 4 },
+  tagline: { fontSize: 24, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.md,
+  },
+  avatarText: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  searchbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    height: 52,
+    borderWidth: 1,
+  },
+  searchInputWrap: { flex: 1, justifyContent: 'center' },
+  searchPlaceholder: {
+    position: 'absolute',
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  bannerWrap: { paddingHorizontal: spacing.base, marginBottom: spacing.md },
+  activeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.xl,
+    padding: spacing.base,
+  },
+  bannerTitle: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  bannerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  bannerChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warnBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  warnText: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm },
+  sectionTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   loadingCenter: { alignItems: 'center', paddingTop: 80 },
+  loadingText: { fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: spacing.md },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: spacing.xl },
   emptyEmoji: { fontSize: 56, marginBottom: spacing.base },
+  emptyTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  emptySub: { fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: 'center' },
 });

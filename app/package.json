@@ -11,6 +11,7 @@
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/vector-icons": "15.0.2",
     "@pchmn/expo-material3-theme": "^1.4.0",
     "@react-navigation/bottom-tabs": "^7.2.0",

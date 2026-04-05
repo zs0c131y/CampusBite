@@ -1,79 +1,86 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
 import { Image } from 'expo-image';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import type { MenuItem } from '@/api/types';
+import { SERVER_URL } from '@/api/client';
 import { formatCurrency } from '@/utils';
 import { spacing, radius } from '@/theme';
+
+function resolveImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${SERVER_URL}${url}`;
+}
 
 interface Props {
   item: MenuItem;
   onAdd: () => void;
+  onRemove?: () => void;
   quantity?: number;
 }
 
-export default function MenuItemCard({ item, onAdd, quantity = 0 }: Props) {
+export default function MenuItemCard({ item, onAdd, onRemove, quantity = 0 }: Props) {
   const theme = useTheme();
   const c = theme.colors;
-  const btnScale = useSharedValue(1);
-
-  const btnStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: btnScale.value }],
-  }));
-
-  const handleAdd = () => {
-    btnScale.value = withSpring(0.85, { damping: 8 }, () => {
-      btnScale.value = withSpring(1);
-    });
-    onAdd();
-  };
+  const [imgError, setImgError] = useState(false);
+  const imageUri = resolveImageUrl(item.image_url);
 
   return (
-    <Surface style={[styles.card, { backgroundColor: c.surface, opacity: item.is_available ? 1 : 0.5 }]} elevation={1}>
-      <View style={styles.content}>
-        <View style={{ flex: 1, marginRight: spacing.md }}>
-          <Text variant="titleSmall" style={{ color: c.onSurface, fontWeight: '700' }} numberOfLines={1}>
+    <Surface style={[styles.card, { backgroundColor: c.surface, opacity: item.is_available ? 1 : 0.45 }]} elevation={0}>
+      <View style={[styles.inner, { borderColor: c.outlineVariant }]}>
+        {/* Left: text */}
+        <View style={styles.textCol}>
+          <Text style={[styles.name, { color: c.onSurface }]} numberOfLines={2}>
             {item.name}
           </Text>
-          {item.description && (
-            <Text variant="bodySmall" style={{ color: c.onSurfaceVariant, marginTop: 2 }} numberOfLines={2}>
+          {item.description ? (
+            <Text style={[styles.desc, { color: c.onSurfaceVariant }]} numberOfLines={2}>
               {item.description}
             </Text>
-          )}
-          {item.category && (
-            <View style={[styles.categoryChip, { backgroundColor: c.tertiaryContainer }]}>
-              <Text variant="labelSmall" style={{ color: c.onTertiaryContainer, fontSize: 11 }}>{item.category}</Text>
-            </View>
-          )}
-          <Text variant="titleSmall" style={{ color: c.primary, fontWeight: '700', marginTop: spacing.sm }}>
+          ) : null}
+          <Text style={[styles.price, { color: c.primary }]}>
             {formatCurrency(item.price)}
           </Text>
         </View>
 
+        {/* Right: image + stepper */}
         <View style={styles.rightCol}>
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={styles.image} contentFit="cover" />
+          {imageUri && !imgError ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              contentFit="cover"
+              onError={() => setImgError(true)}
+            />
           ) : (
-            <View style={[styles.imagePlaceholder, { backgroundColor: c.primaryContainer }]}>
-              <Text style={{ fontSize: 28 }}>🍽️</Text>
+            <View style={[styles.imageFallback, { backgroundColor: c.surfaceVariant }]}>
+              <MaterialCommunityIcons name="food" size={28} color={c.onSurfaceVariant} />
             </View>
           )}
 
-          <Animated.View style={[styles.addBtn, btnStyle]}>
+          {quantity === 0 ? (
             <Pressable
-              style={[styles.addBtnInner, {
-                backgroundColor: quantity > 0 ? c.primary : c.primaryContainer,
-              }]}
-              onPress={handleAdd}
+              style={[styles.addBtn, { backgroundColor: c.primaryContainer }]}
+              onPress={onAdd}
               disabled={!item.is_available}
+              android_ripple={{ color: c.primary + '30', borderless: false }}
             >
-              <Text style={{ color: quantity > 0 ? c.onPrimary : c.onPrimaryContainer, fontWeight: '700', fontSize: 18 }}>
-                {quantity > 0 ? `${quantity}` : '+'}
-              </Text>
+              <Text style={[styles.addBtnText, { color: c.onPrimaryContainer }]}>Add</Text>
             </Pressable>
-          </Animated.View>
+          ) : (
+            <View style={[styles.stepper, { backgroundColor: c.primaryContainer }]}>
+              <Pressable onPress={onRemove} hitSlop={8} style={styles.stepperBtn}>
+                <MaterialCommunityIcons name="minus" size={15} color={c.onPrimaryContainer} />
+              </Pressable>
+              <Text style={[styles.stepperQty, { color: c.onPrimaryContainer }]}>{quantity}</Text>
+              <Pressable onPress={onAdd} hitSlop={8} style={styles.stepperBtn}>
+                <MaterialCommunityIcons name="plus" size={15} color={c.onPrimaryContainer} />
+              </Pressable>
+            </View>
+          )}
         </View>
       </View>
     </Surface>
@@ -82,11 +89,45 @@ export default function MenuItemCard({ item, onAdd, quantity = 0 }: Props) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: radius.xl, overflow: 'hidden' },
-  content: { flexDirection: 'row', padding: spacing.base },
-  categoryChip: { alignSelf: 'flex-start', borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: spacing.sm },
-  rightCol: { alignItems: 'center' },
-  image: { width: 80, height: 80, borderRadius: radius.lg },
-  imagePlaceholder: { width: 80, height: 80, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
-  addBtn: { marginTop: spacing.sm },
-  addBtnInner: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  inner: {
+    flexDirection: 'row',
+    padding: spacing.base,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.xl,
+    gap: spacing.md,
+  },
+  textCol: { flex: 1, justifyContent: 'center' },
+  name: { fontSize: 15, fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
+  desc: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3, lineHeight: 16 },
+  price: { fontSize: 15, fontFamily: 'Inter_700Bold', marginTop: spacing.sm },
+
+  rightCol: { alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
+  image: { width: 88, height: 88, borderRadius: radius.lg },
+  imageFallback: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  addBtn: {
+    width: 88,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    alignItems: 'center',
+  },
+  addBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+
+  stepper: {
+    width: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
+  stepperBtn: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
+  stepperQty: { fontSize: 14, fontFamily: 'Inter_700Bold', minWidth: 18, textAlign: 'center' },
 });

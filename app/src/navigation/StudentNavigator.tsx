@@ -66,7 +66,7 @@ function TabBarItem({ label, icon, activeIcon, isFocused, badge, onPress, color,
           </View>
         </Animated.View>
       </View>
-      <Animated.Text style={[styles.tabLabel, { color, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? '600' : '400' }]}>
+      <Animated.Text style={[styles.tabLabel, { color, fontSize: isFocused ? 12 : 11, fontFamily: isFocused ? 'Inter_600SemiBold' : 'Inter_400Regular' }]}>
         {label}
       </Animated.Text>
     </Pressable>
@@ -182,9 +182,7 @@ const styles = StyleSheet.create({
     inset: 0,
     borderRadius: 16,
   },
-  tabLabel: {
-    letterSpacing: 0.2,
-  },
+  tabLabel: { letterSpacing: 0.2 },
   badge: {
     position: 'absolute',
     top: -2,

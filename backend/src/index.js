@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 import dns from "dns";
@@ -127,7 +127,7 @@ const orderActionLimiter = rateLimit({
         if (payload?.id) return `user:${payload.id}`;
       }
     } catch {}
-    return req.ip;
+    return ipKeyGenerator(req.ip);
   },
   message: {
     success: false,

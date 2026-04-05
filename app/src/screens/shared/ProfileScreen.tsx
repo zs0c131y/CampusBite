@@ -117,7 +117,7 @@ export default function ProfileScreen() {
                 <List.Item
                   title="Register Number"
                   description={user.register_number}
-                  left={(props) => <List.Icon {...props} icon="identifier" />}
+                  left={(props) => <List.Icon {...props} icon="card-account-details-outline" />}
                   titleStyle={{ color: c.onSurfaceVariant, fontSize: 13 }}
                   descriptionStyle={{ color: c.onSurface, fontWeight: '600' }}
                 />

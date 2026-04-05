@@ -3,6 +3,7 @@ import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-nat
 import { Text, useTheme, Surface, Chip, ActivityIndicator, Button } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -90,6 +91,7 @@ export default function OrderHistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <StatusBar style="dark" />
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
         <Text variant="titleLarge" style={{ color: c.onSurface, fontWeight: '700' }}>My Orders 🧾</Text>
       </View>

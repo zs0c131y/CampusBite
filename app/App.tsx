@@ -8,6 +8,13 @@ import { PaperProvider } from 'react-native-paper';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet } from 'react-native';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
@@ -18,11 +25,25 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const { theme: dynamicTheme } = useMaterial3Theme({ fallbackSourceColor: '#C56200' });
-  const paperTheme = buildTheme(dynamicTheme);
+
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  const paperTheme = buildTheme(dynamicTheme, fontsLoaded || !!fontError);
 
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -32,7 +53,7 @@ export default function App() {
             <AuthProvider>
               <CartProvider>
                 <RootNavigator />
-                <StatusBar style="auto" />
+                <StatusBar style="dark" />
               </CartProvider>
             </AuthProvider>
           </NavigationContainer>

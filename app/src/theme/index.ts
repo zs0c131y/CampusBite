@@ -1,4 +1,4 @@
-import { MD3LightTheme, MD3DarkTheme, adaptNavigationTheme } from 'react-native-paper';
+import { MD3LightTheme, MD3DarkTheme, adaptNavigationTheme, configureFonts } from 'react-native-paper';
 import { DarkTheme as NavDarkTheme, DefaultTheme as NavLightTheme } from '@react-navigation/native';
 import type { MD3Theme } from 'react-native-paper';
 
@@ -89,7 +89,7 @@ const darkColors = {
   },
 };
 
-export function buildTheme(dynamicTheme?: Partial<typeof lightColors>): MD3Theme {
+export function buildTheme(dynamicTheme?: Partial<typeof lightColors>, fontsReady = false): MD3Theme {
   // On Android 12+ we get dynamic colors from the wallpaper; fall back to our seed
   const colors = {
     ...lightColors,
@@ -103,6 +103,27 @@ export function buildTheme(dynamicTheme?: Partial<typeof lightColors>): MD3Theme
       ...colors,
     },
     roundness: 4, // M3 extra-large = 28dp; Paper uses roundness multiplier (28/7 ≈ 4)
+    fonts: fontsReady
+      ? configureFonts({
+          config: {
+            displayLarge:   { fontFamily: 'Inter_700Bold' },
+            displayMedium:  { fontFamily: 'Inter_700Bold' },
+            displaySmall:   { fontFamily: 'Inter_700Bold' },
+            headlineLarge:  { fontFamily: 'Inter_700Bold' },
+            headlineMedium: { fontFamily: 'Inter_600SemiBold' },
+            headlineSmall:  { fontFamily: 'Inter_600SemiBold' },
+            titleLarge:     { fontFamily: 'Inter_600SemiBold' },
+            titleMedium:    { fontFamily: 'Inter_600SemiBold' },
+            titleSmall:     { fontFamily: 'Inter_500Medium' },
+            bodyLarge:      { fontFamily: 'Inter_400Regular' },
+            bodyMedium:     { fontFamily: 'Inter_400Regular' },
+            bodySmall:      { fontFamily: 'Inter_400Regular' },
+            labelLarge:     { fontFamily: 'Inter_500Medium' },
+            labelMedium:    { fontFamily: 'Inter_500Medium' },
+            labelSmall:     { fontFamily: 'Inter_400Regular' },
+          },
+        })
+      : MD3LightTheme.fonts,
   };
 }
 

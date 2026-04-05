@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Pressable, View } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
 import { Image } from 'expo-image';
@@ -6,8 +6,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import type { Store } from '@/api/types';
+import { SERVER_URL } from '@/api/client';
 import { formatOperatingHours } from '@/utils';
 import { spacing, radius } from '@/theme';
+
+function resolveImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${SERVER_URL}${url}`;
+}
 
 interface Props {
   store: Store;
@@ -24,6 +31,8 @@ export default function StoreCard({ store, onPress }: Props) {
   }));
 
   const hours = formatOperatingHours(store.operating_hours);
+  const imageUri = resolveImageUrl(store.image_url);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Animated.View style={animStyle}>
@@ -36,8 +45,13 @@ export default function StoreCard({ store, onPress }: Props) {
         <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
           {/* Image */}
           <View style={styles.imageContainer}>
-            {store.image_url ? (
-              <Image source={{ uri: store.image_url }} style={styles.image} contentFit="cover" />
+            {imageUri && !imgError ? (
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.image}
+                contentFit="cover"
+                onError={() => setImgError(true)}
+              />
             ) : (
               <LinearGradient
                 colors={[c.primary, c.primaryContainer]}
@@ -50,25 +64,23 @@ export default function StoreCard({ store, onPress }: Props) {
               colors={['transparent', 'rgba(0,0,0,0.45)']}
               style={styles.imageOverlay}
             />
-            {/* Status indicator */}
-            <View style={[styles.statusDot, { backgroundColor: store.is_active ? '#22C55E' : '#EF4444' }]} />
           </View>
 
           {/* Content */}
           <View style={styles.content}>
             <View style={styles.row}>
-              <Text variant="titleMedium" style={{ color: c.onSurface, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+              <Text style={[styles.storeName, { color: c.onSurface, flex: 1 }]} numberOfLines={1}>
                 {store.name}
               </Text>
               <View style={[styles.activeBadge, { backgroundColor: store.is_active ? c.primaryContainer : c.surfaceVariant }]}>
-                <Text variant="labelSmall" style={{ color: store.is_active ? c.onPrimaryContainer : c.onSurfaceVariant, fontWeight: '600' }}>
+                <Text style={[styles.badgeText, { color: store.is_active ? c.onPrimaryContainer : c.onSurfaceVariant }]}>
                   {store.is_active ? 'Open' : 'Closed'}
                 </Text>
               </View>
             </View>
 
             {store.description && (
-              <Text variant="bodySmall" style={{ color: c.onSurfaceVariant, marginTop: 2 }} numberOfLines={2}>
+              <Text style={[styles.storeDesc, { color: c.onSurfaceVariant }]} numberOfLines={2}>
                 {store.description}
               </Text>
             )}
@@ -77,7 +89,7 @@ export default function StoreCard({ store, onPress }: Props) {
               {hours ? (
                 <View style={styles.hoursBadge}>
                   <Text style={{ fontSize: 12 }}>🕐</Text>
-                  <Text variant="bodySmall" style={{ color: c.onSurfaceVariant, marginLeft: spacing.xs }}>
+                  <Text style={[styles.hoursText, { color: c.onSurfaceVariant }]}>
                     {hours}
                   </Text>
                 </View>
@@ -99,11 +111,14 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   placeholder: { alignItems: 'center', justifyContent: 'center' },
   imageOverlay: { ...StyleSheet.absoluteFillObject },
-  statusDot: { position: 'absolute', top: spacing.sm, right: spacing.sm, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: 'white' },
   content: { padding: spacing.base },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  storeName: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  storeDesc: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  badgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   activeBadge: { borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
   hoursBadge: { flexDirection: 'row', alignItems: 'center' },
+  hoursText: { fontSize: 12, fontFamily: 'Inter_400Regular', marginLeft: spacing.xs },
   chevron: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 });

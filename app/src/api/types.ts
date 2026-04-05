@@ -138,9 +138,13 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
   role: UserRole;
-  register_number?: string;
-  employee_id?: string;
+  registerNumber?: string;
+  employeeId?: string;
+  phoneNumber?: string;
+  storeName?: string;
+  storeUpiId?: string;
 }
 
 export interface CheckoutSession {

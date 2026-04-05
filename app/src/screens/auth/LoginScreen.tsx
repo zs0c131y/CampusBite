@@ -8,9 +8,10 @@ import {
   Pressable,
 } from 'react-native';
 import { Text, TextInput, Button, useTheme, Surface } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,10 +40,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await login(email.trim().toLowerCase(), password);
-      // Navigation handled automatically by RootNavigator
     } catch (e: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(e.response?.data?.message ?? e.message ?? 'Login failed. Please try again.');
+      if (e.code === 'ERR_NETWORK' || e.message === 'Network Error') {
+        setError('Cannot reach the server. Make sure the backend is running and your device is on the same network.');
+      } else {
+        setError(e.response?.data?.message ?? e.message ?? 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -52,46 +56,46 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   return (
     <LinearGradient
-      colors={[c.background, c.primaryContainer + '40', c.background]}
-      locations={[0, 0.5, 1]}
+      colors={[c.primaryContainer + 'AA', c.background, c.background]}
+      locations={[0, 0.4, 1]}
       style={styles.gradient}
     >
+      <StatusBar style="dark" />
+      {/* Decorative blobs */}
+      <View style={[styles.blob1, { backgroundColor: c.primary + '18' }]} />
+      <View style={[styles.blob2, { backgroundColor: c.tertiary + '14' }]} />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo / Brand */}
+          {/* Brand header */}
           <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.brand}>
-            <Surface
-              style={[styles.logoSurface, { backgroundColor: c.primaryContainer }]}
-              elevation={2}
-            >
-              <Text style={[styles.logoEmoji]}>🍽️</Text>
-            </Surface>
-            <Text variant="displaySmall" style={[styles.appName, { color: c.primary }]}>
-              CampusBite
-            </Text>
-            <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant, marginTop: 4 }}>
-              Your campus food companion
+            <View style={[styles.logoCircle, { backgroundColor: c.primary }]}>
+              <Text style={styles.logoEmoji}>🍽️</Text>
+            </View>
+            <Text style={[styles.appName, { color: c.primary }]}>CampusBite</Text>
+          </Animated.View>
+
+          {/* Title */}
+          <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.header}>
+            <Text style={[styles.title, { color: c.onSurface }]}>Welcome back</Text>
+            <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
+              Sign in to continue ordering
             </Text>
           </Animated.View>
 
-          {/* Card */}
-          <Animated.View entering={FadeInDown.delay(80).springify()}>
-            <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-              <Text variant="headlineSmall" style={[styles.heading, { color: c.onSurface }]}>
-                Welcome back 👋
-              </Text>
-              <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant, marginBottom: spacing.xl }}>
-                Sign in to continue ordering
-              </Text>
-
-              {/* Email */}
+          {/* Form */}
+          <Animated.View entering={FadeInDown.delay(120).springify()}>
+            <Surface style={styles.card} elevation={2}>
               <TextInput
                 label="Email address"
                 value={email}
@@ -107,7 +111,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 outlineStyle={{ borderRadius: radius.md }}
               />
 
-              {/* Password */}
               <TextInput
                 ref={passwordRef}
                 label="Password"
@@ -129,26 +132,22 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 outlineStyle={{ borderRadius: radius.md }}
               />
 
-              {/* Forgot password */}
               <Pressable
                 onPress={() => navigation.navigate('ForgotPassword')}
                 style={styles.forgotRow}
               >
-                <Text variant="labelMedium" style={{ color: c.primary }}>
-                  Forgot password?
-                </Text>
+                <Text style={[styles.forgotText, { color: c.primary }]}>Forgot password?</Text>
               </Pressable>
 
-              {/* Error */}
               {!!error && (
-                <Animated.View entering={FadeInDown.duration(200)} style={[styles.errorBox, { backgroundColor: c.errorContainer }]}>
-                  <Text variant="bodySmall" style={{ color: c.onErrorContainer }}>
-                    {error}
-                  </Text>
+                <Animated.View
+                  entering={FadeInDown.duration(200)}
+                  style={[styles.errorBox, { backgroundColor: c.errorContainer }]}
+                >
+                  <Text style={[styles.errorText, { color: c.onErrorContainer }]}>{error}</Text>
                 </Animated.View>
               )}
 
-              {/* Login button */}
               <Button
                 mode="contained"
                 onPress={handleLogin}
@@ -160,19 +159,17 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               >
                 Sign In
               </Button>
-
-              {/* Register link */}
-              <View style={styles.registerRow}>
-                <Text variant="bodyMedium" style={{ color: c.onSurfaceVariant }}>
-                  Don't have an account?{' '}
-                </Text>
-                <Pressable onPress={() => navigation.navigate('Register')}>
-                  <Text variant="bodyMedium" style={{ color: c.primary, fontWeight: '600' }}>
-                    Register
-                  </Text>
-                </Pressable>
-              </View>
             </Surface>
+          </Animated.View>
+
+          {/* Footer */}
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.registerRow}>
+            <Text style={[styles.registerText, { color: c.onSurfaceVariant }]}>
+              Don't have an account?{' '}
+            </Text>
+            <Pressable onPress={() => navigation.navigate('Register')}>
+              <Text style={[styles.registerLink, { color: c.primary }]}>Register</Text>
+            </Pressable>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -182,19 +179,71 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  kav: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: spacing.base, justifyContent: 'center' },
-  brand: { alignItems: 'center', marginBottom: spacing.xxl },
-  logoSurface: { width: 80, height: 80, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
-  logoEmoji: { fontSize: 40 },
-  appName: { fontWeight: '700', letterSpacing: -0.5 },
+  blob1: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    top: -80,
+    right: -80,
+  },
+  blob2: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: 100,
+    left: -60,
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.base,
+    justifyContent: 'center',
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  logoCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoEmoji: { fontSize: 22 },
+  appName: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.5,
+  },
+  header: { marginBottom: spacing.xl },
+  title: {
+    fontSize: 32,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.8,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
+  },
   card: { borderRadius: radius.xl, padding: spacing.xl },
-  heading: { fontWeight: '700', marginBottom: 4 },
   input: { marginBottom: spacing.md },
   forgotRow: { alignSelf: 'flex-end', marginBottom: spacing.base },
+  forgotText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   errorBox: { borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.base },
+  errorText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   btn: { borderRadius: radius.lg, marginTop: spacing.xs },
   btnContent: { height: 52 },
-  btnLabel: { fontSize: 16, fontWeight: '600', letterSpacing: 0.3 },
-  registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.lg },
+  btnLabel: { fontSize: 16, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.2 },
+  registerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
+  },
+  registerText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  registerLink: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 });

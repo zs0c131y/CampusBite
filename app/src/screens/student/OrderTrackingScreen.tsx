@@ -4,6 +4,7 @@ import { Text, useTheme, Surface, Button, ActivityIndicator } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
 
 import { ordersApi } from '@/api/orders';
 import type { Order, OrderStatus } from '@/api/types';
@@ -70,6 +71,7 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <StatusBar style="dark" />
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
         <Pressable onPress={() => navigation.goBack()}>
           <Text style={{ color: c.primary }}>← Back</Text>

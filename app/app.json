@@ -24,7 +24,8 @@
         "backgroundColor": "#FFDCC2"
       },
       "package": "dev.adarshg.campusbite",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": true
     },
     "plugins": [
       "expo-font",

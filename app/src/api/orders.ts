@@ -12,7 +12,7 @@ export interface CreateOrderPayload {
 
 export const ordersApi = {
   checkoutSession: (storeId: string, items: { menuItemId: string; quantity: number }[]) =>
-    api.post<ApiResponse<CheckoutSession>>('/orders/checkout-session', { store_id: storeId, items }),
+    api.post<ApiResponse<CheckoutSession>>('/orders/checkout-session', { storeId, items }),
 
   create: (payload: CreateOrderPayload) =>
     api.post<ApiResponse<Order>>('/orders', payload),
