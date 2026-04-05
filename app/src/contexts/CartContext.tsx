@@ -84,10 +84,13 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, EMPTY_CART);
 
-  // Restore cart from storage
+  // Restore cart from storage — filter out stale items missing price
   useEffect(() => {
     getCart<Cart>().then((stored) => {
-      if (stored?.storeId) dispatch({ type: 'RESTORE', cart: stored });
+      if (!stored?.storeId) return;
+      const validItems = stored.items.filter((i) => typeof i.price === 'number');
+      if (validItems.length === 0) return;
+      dispatch({ type: 'RESTORE', cart: { ...stored, items: validItems } });
     });
   }, []);
 
@@ -127,7 +130,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const itemCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
-  const total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const total = cart.items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
 
   return (
     <CartContext.Provider

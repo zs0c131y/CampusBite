@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Linking, Pressable, TextInput as RNTextInput } from 'react-native';
-import { Text, useTheme, Surface, Button, TextInput, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Linking, Pressable, TextInput as RNTextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, useTheme, Surface, Button, TextInput, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,12 +26,15 @@ export default function CheckoutScreen() {
 
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [transactionId, setTransactionId] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const showError = (msg: string) => setErrorMsg(msg);
+
   const [session, setSession] = useState<{
-    order_number: string;
-    payment_reference: string;
-    upi_id: string;
-    total_amount: number;
-    store_name: string;
+    checkoutToken: string;
+    upiId: string;
+    totalAmount: number;
+    storeName: string;
+    paymentReference: string;
   } | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -45,24 +48,35 @@ export default function CheckoutScreen() {
       const { data } = await ordersApi.checkoutSession(
         cart.storeId,
         cart.items.map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+        specialInstructions.trim() || undefined,
       );
-      if (data.success) { setSession(data.data); setStep('payment'); }
+      if (data.success) {
+        const s = data.data;
+        setSession({
+          checkoutToken: s.checkoutToken,
+          upiId: s.store.upiId,
+          totalAmount: s.totalAmount,
+          storeName: s.store.name,
+          paymentReference: s.paymentReference,
+        });
+        setStep('payment');
+      }
     } catch (e: any) {
-      alert(e.response?.data?.message ?? 'Failed to create checkout session.');
+      showError(e.response?.data?.message ?? 'Failed to create checkout session.');
     } finally { setCreatingSession(false); }
   };
 
   const handleOpenUpi = () => {
     if (!session) return;
     const upiUrl = buildUpiLink({
-      upiId: session.upi_id,
-      payee: session.store_name,
-      amount: session.total_amount,
-      transactionNote: `CampusBite order ${session.order_number}`,
-      transactionRef: session.payment_reference,
+      upiId: session.upiId,
+      payee: session.storeName,
+      amount: session.totalAmount,
+      transactionNote: `CampusBite order`,
+      transactionRef: session.paymentReference,
     });
     Linking.openURL(upiUrl).catch(() =>
-      alert('No UPI app found. Please pay manually and enter the transaction ID.'),
+      showError('No UPI app found. Please pay manually and enter the transaction ID.'),
     );
   };
 
@@ -72,11 +86,7 @@ export default function CheckoutScreen() {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       const { data } = await ordersApi.create({
-        store_id: cart.storeId,
-        items: cart.items.map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
-        payment_reference: session.payment_reference,
-        total_amount: session.total_amount,
-        special_instructions: specialInstructions.trim() || undefined,
+        checkoutToken: session.checkoutToken,
         transaction_id: transactionId.trim() || undefined,
       });
       if (data.success) {
@@ -86,7 +96,7 @@ export default function CheckoutScreen() {
         setTimeout(() => navigation.replace('OrderTracking', { orderId: data.data._id }), 1500);
       }
     } catch (e: any) {
-      alert(e.response?.data?.message ?? 'Failed to place order.');
+      showError(e.response?.data?.message ?? 'Failed to place order.');
     } finally { setPlacingOrder(false); }
   };
 
@@ -136,7 +146,7 @@ export default function CheckoutScreen() {
           <Text style={styles.heroLabel}>
             {step === 'review' ? 'Review your order' : 'Complete payment'}
           </Text>
-          <Text style={styles.heroAmount}>{formatCurrency(total)}</Text>
+          <Text style={styles.heroAmount}>{formatCurrency(total ?? 0)}</Text>
           <View style={styles.heroMeta}>
             <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
               <MaterialCommunityIcons name="store-outline" size={13} color="#fff" />
@@ -160,6 +170,11 @@ export default function CheckoutScreen() {
         </View>
       </LinearGradient>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
       <ScrollView
         contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 100, gap: spacing.md }}
         showsVerticalScrollIndicator={false}
@@ -188,11 +203,11 @@ export default function CheckoutScreen() {
                     {item.name}
                   </Text>
                   <Text style={[styles.receiptItemUnit, { color: c.onSurfaceVariant }]}>
-                    {formatCurrency(item.price)} each
+                    {formatCurrency(item.price ?? 0)} each
                   </Text>
                 </View>
                 <Text style={[styles.receiptItemTotal, { color: c.onSurface }]}>
-                  {formatCurrency(item.price * item.quantity)}
+                  {formatCurrency((item.price ?? 0) * item.quantity)}
                 </Text>
               </View>
             </View>
@@ -204,7 +219,7 @@ export default function CheckoutScreen() {
             style={styles.receiptTotal}
           >
             <Text style={[styles.receiptTotalLabel, { color: c.onPrimaryContainer }]}>Total to pay</Text>
-            <Text style={[styles.receiptTotalValue, { color: c.primary }]}>{formatCurrency(total)}</Text>
+            <Text style={[styles.receiptTotalValue, { color: c.primary }]}>{formatCurrency(total ?? 0)}</Text>
           </LinearGradient>
         </Surface>
 
@@ -253,18 +268,18 @@ export default function CheckoutScreen() {
                 <Text style={styles.payCardChip}>UPI</Text>
               </View>
 
-              <Text style={styles.payCardAmount}>{formatCurrency(session.total_amount)}</Text>
-              <Text style={styles.payCardStore}>{session.store_name}</Text>
+              <Text style={styles.payCardAmount}>{formatCurrency(session.totalAmount)}</Text>
+              <Text style={styles.payCardStore}>{session.storeName}</Text>
 
               <View style={[styles.payCardDivider, { borderColor: 'rgba(255,255,255,0.2)' }]} />
               <View style={styles.payCardFooter}>
                 <View>
-                  <Text style={styles.payCardFooterLabel}>Order No.</Text>
-                  <Text style={styles.payCardFooterValue}>{session.order_number}</Text>
+                  <Text style={styles.payCardFooterLabel}>Ref No.</Text>
+                  <Text style={styles.payCardFooterValue}>{session.paymentReference}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.payCardFooterLabel}>UPI ID</Text>
-                  <Text style={styles.payCardFooterValue} numberOfLines={1}>{session.upi_id}</Text>
+                  <Text style={styles.payCardFooterValue} numberOfLines={1}>{session.upiId}</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -276,7 +291,7 @@ export default function CheckoutScreen() {
               </Text>
               {[
                 { icon: 'open-in-app', label: 'Open your UPI app below' },
-                { icon: 'currency-inr', label: `Pay ${formatCurrency(session.total_amount)} to ${session.store_name}` },
+                { icon: 'currency-inr', label: `Pay ${formatCurrency(session.totalAmount)} to ${session.storeName}` },
                 { icon: 'receipt-text-outline', label: 'Copy the transaction ID from your app' },
                 { icon: 'check-circle-outline', label: 'Paste it below and confirm your order' },
               ].map((step, i) => (
@@ -354,6 +369,17 @@ export default function CheckoutScreen() {
           </Button>
         )}
       </View>
+      </KeyboardAvoidingView>
+
+      <Snackbar
+        visible={!!errorMsg}
+        onDismiss={() => setErrorMsg('')}
+        duration={4000}
+        style={{ backgroundColor: c.errorContainer, marginBottom: insets.bottom + 80 }}
+        action={{ label: 'Dismiss', onPress: () => setErrorMsg(''), labelStyle: { color: c.error } }}
+      >
+        <Text style={{ color: c.onErrorContainer, fontFamily: 'Inter_400Regular' }}>{errorMsg}</Text>
+      </Snackbar>
     </View>
   );
 }

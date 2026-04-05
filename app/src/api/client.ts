@@ -7,6 +7,10 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:5000/api';
 // Uses regex instead of new URL() to avoid Hermes/RN polyfill issues at module init time.
 export const SERVER_URL = BASE_URL.match(/^https?:\/\/[^/]*/)?.[0] ?? '';
 
+// Callback invoked when token refresh fails so AuthContext can sign the user out
+let _onSignOut: (() => void) | null = null;
+export function setSignOutCallback(cb: () => void) { _onSignOut = cb; }
+
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
@@ -44,7 +48,7 @@ api.interceptors.response.use(
         }
       } catch {
         await clearAuthData();
-        // Navigation to login is handled in AuthContext via token absence check
+        _onSignOut?.();
       }
     }
     return Promise.reject(error);

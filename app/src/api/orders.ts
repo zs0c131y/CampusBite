@@ -2,17 +2,13 @@ import api from './client';
 import type { ApiResponse, Order, CheckoutSession, CartItem } from './types';
 
 export interface CreateOrderPayload {
-  store_id: string;
-  items: { menuItemId: string; quantity: number }[];
-  payment_reference: string;
-  total_amount: number;
-  special_instructions?: string;
+  checkoutToken: string;
   transaction_id?: string;
 }
 
 export const ordersApi = {
-  checkoutSession: (storeId: string, items: { menuItemId: string; quantity: number }[]) =>
-    api.post<ApiResponse<CheckoutSession>>('/orders/checkout-session', { storeId, items }),
+  checkoutSession: (storeId: string, items: { menuItemId: string; quantity: number }[], specialInstructions?: string) =>
+    api.post<ApiResponse<CheckoutSession>>('/orders/checkout-session', { storeId, items, specialInstructions }),
 
   create: (payload: CreateOrderPayload) =>
     api.post<ApiResponse<Order>>('/orders', payload),

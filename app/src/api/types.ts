@@ -148,9 +148,20 @@ export interface RegisterPayload {
 }
 
 export interface CheckoutSession {
-  order_number: string;
-  payment_reference: string;
-  upi_id: string;
-  total_amount: number;
-  store_name: string;
+  checkoutToken: string;
+  paymentReference: string;
+  totalAmount: number;
+  store: {
+    id: string;
+    name: string;
+    upiId: string;
+    qrCodeUrl: string | null;
+  };
+  payment: {
+    upiLink: string;
+    amount: number;
+    storeName: string;
+    storeUpiId: string;
+    paymentReference: string;
+  };
 }

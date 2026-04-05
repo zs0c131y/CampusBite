@@ -3,8 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { View, StyleSheet, Pressable, Platform } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring, interpolate } from 'react-native-reanimated';
+import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { StudentStackParamList, StudentTabParamList } from './types';
@@ -23,7 +23,11 @@ const Tab = createBottomTabNavigator<StudentTabParamList>();
 
 // ── Custom M3 Navigation Bar ──────────────────────────────────────────────────
 
-type TabIconName = 'home' | 'home-outline' | 'receipt-text' | 'receipt-text-outline' | 'cart' | 'cart-outline' | 'account' | 'account-outline';
+type TabIconName =
+  | 'home' | 'home-outline'
+  | 'receipt-text' | 'receipt-text-outline'
+  | 'cart' | 'cart-outline'
+  | 'account' | 'account-outline';
 
 interface TabBarItemProps {
   label: string;
@@ -34,55 +38,62 @@ interface TabBarItemProps {
   onPress: () => void;
   color: string;
   indicatorColor: string;
+  errorColor: string;
 }
 
-function TabBarItem({ label, icon, activeIcon, isFocused, badge, onPress, color, indicatorColor }: TabBarItemProps) {
+function TabBarItem({ label, icon, activeIcon, isFocused, badge, onPress, color, indicatorColor, errorColor }: TabBarItemProps) {
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(isFocused ? 1 : 0.85, { damping: 12 }) }],
-    opacity: withSpring(isFocused ? 1 : 0.7, { damping: 12 }),
+    transform: [{ scale: withSpring(isFocused ? 1 : 0.85, { damping: 14, stiffness: 180 }) }],
+    opacity: withSpring(isFocused ? 1 : 0.65, { damping: 14 }),
   }));
 
   const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: withSpring(isFocused ? 1 : 0, { damping: 14 }) }],
-    opacity: withSpring(isFocused ? 1 : 0, { damping: 14 }),
+    transform: [{ scaleX: withSpring(isFocused ? 1 : 0, { damping: 16, stiffness: 200 }) }],
+    opacity: withSpring(isFocused ? 1 : 0, { damping: 16 }),
   }));
 
   return (
-    <Pressable style={styles.tabItem} onPress={onPress} android_ripple={{ color: 'transparent' }}>
+    <Pressable
+      style={styles.tabItem}
+      onPress={onPress}
+      android_ripple={{ color: 'transparent' }}
+      hitSlop={8}
+    >
       <View style={styles.tabIconContainer}>
-        {/* Filled pill indicator */}
+        {/* Pill indicator */}
         <Animated.View style={[styles.indicator, { backgroundColor: indicatorColor }, indicatorStyle]} />
         <Animated.View style={animStyle}>
-          <View style={{ position: 'relative' }}>
-            <MaterialCommunityIcons
-              name={isFocused ? activeIcon : icon}
-              size={24}
-              color={color}
-            />
+          <View>
+            <MaterialCommunityIcons name={isFocused ? activeIcon : icon} size={24} color={color} />
             {badge != null && badge > 0 && (
-              <View style={[styles.badge, { backgroundColor: color }]}>
+              <View style={[styles.badge, { backgroundColor: errorColor }]}>
+                <Text style={styles.badgeText}>{badge > 9 ? '9+' : String(badge)}</Text>
               </View>
             )}
           </View>
         </Animated.View>
       </View>
-      <Animated.Text style={[styles.tabLabel, { color, fontSize: isFocused ? 12 : 11, fontFamily: isFocused ? 'Inter_600SemiBold' : 'Inter_400Regular' }]}>
+      <Text style={[styles.tabLabel, {
+        color,
+        fontFamily: isFocused ? 'Inter_600SemiBold' : 'Inter_400Regular',
+        fontSize: isFocused ? 12 : 11,
+      }]}>
         {label}
-      </Animated.Text>
+      </Text>
     </Pressable>
   );
 }
 
-function CustomTabBar({ state, descriptors, navigation }: any) {
+function CustomTabBar({ state, navigation }: any) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { itemCount } = useCart();
 
   const tabs = [
-    { name: 'HomeTab', label: 'Home', icon: 'home-outline' as TabIconName, activeIcon: 'home' as TabIconName },
-    { name: 'OrdersTab', label: 'Orders', icon: 'receipt-text-outline' as TabIconName, activeIcon: 'receipt-text' as TabIconName },
-    { name: 'CartTab', label: 'Cart', icon: 'cart-outline' as TabIconName, activeIcon: 'cart' as TabIconName },
-    { name: 'ProfileTab', label: 'Profile', icon: 'account-outline' as TabIconName, activeIcon: 'account' as TabIconName },
+    { name: 'HomeTab',    label: 'Home',    icon: 'home-outline' as TabIconName,         activeIcon: 'home' as TabIconName },
+    { name: 'OrdersTab',  label: 'Orders',  icon: 'receipt-text-outline' as TabIconName, activeIcon: 'receipt-text' as TabIconName },
+    { name: 'CartTab',    label: 'Cart',    icon: 'cart-outline' as TabIconName,          activeIcon: 'cart' as TabIconName },
+    { name: 'ProfileTab', label: 'Profile', icon: 'account-outline' as TabIconName,       activeIcon: 'account' as TabIconName },
   ];
 
   return (
@@ -97,8 +108,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       {state.routes.map((route: any, index: number) => {
         const isFocused = state.index === index;
         const tab = tabs[index];
-        const badge = tab.name === 'CartTab' ? itemCount : undefined;
-
         return (
           <TabBarItem
             key={route.key}
@@ -106,12 +115,11 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             icon={tab.icon}
             activeIcon={tab.activeIcon}
             isFocused={isFocused}
-            badge={badge}
+            badge={tab.name === 'CartTab' ? itemCount : undefined}
             color={isFocused ? theme.colors.primary : theme.colors.onSurfaceVariant}
             indicatorColor={theme.colors.primaryContainer}
-            onPress={() => {
-              if (!isFocused) navigation.navigate(route.name);
-            }}
+            errorColor={theme.colors.error}
+            onPress={() => { if (!isFocused) navigation.navigate(route.name); }}
           />
         );
       })}
@@ -161,8 +169,10 @@ export function StudentNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 8,
+    // Android elevation for shadow
+    elevation: Platform.OS === 'android' ? 12 : 0,
   },
   tabItem: {
     flex: 1,
@@ -182,13 +192,25 @@ const styles = StyleSheet.create({
     inset: 0,
     borderRadius: 16,
   },
-  tabLabel: { letterSpacing: 0.2 },
+  tabLabel: {
+    letterSpacing: 0.2,
+  },
   badge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -4,
+    right: -7,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 16,
+    includeFontPadding: false,
   },
 });

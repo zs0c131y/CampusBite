@@ -138,6 +138,9 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       <View style={[styles.blob1, { backgroundColor: c.primary + '14' }]} />
       <View style={[styles.blob2, { backgroundColor: c.secondary + '10' }]} />
 
+      {/* Fixed status-bar zone — content cannot scroll into this area */}
+      <View style={{ height: insets.top }} />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -145,7 +148,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+            { paddingTop: 24, paddingBottom: insets.bottom + 24 },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

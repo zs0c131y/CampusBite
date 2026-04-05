@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import { authApi } from '@/api/auth';
 import { usersApi } from '@/api/users';
+import { setSignOutCallback } from '@/api/client';
 import {
   saveTokens,
   getAccessToken,
@@ -51,6 +52,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, { status: 'loading' });
+
+  // Wire up forced sign-out when token refresh fails in the API interceptor
+  useEffect(() => {
+    setSignOutCallback(() => dispatch({ type: 'SIGN_OUT' }));
+  }, []);
 
   // Restore session on mount
   useEffect(() => {

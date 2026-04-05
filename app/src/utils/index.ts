@@ -2,8 +2,8 @@ import type { OrderStatus, PaymentStatus, OperatingHours } from '@/api/types';
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 
-export function formatCurrency(amount: number): string {
-  return `₹${amount.toFixed(2)}`;
+export function formatCurrency(amount: number | undefined | null): string {
+  return `₹${(amount ?? 0).toFixed(2)}`;
 }
 
 export function formatDate(iso: string): string {
