@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { Text, useTheme, Surface, Button, Avatar, List, Dialog, Portal } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { Text, useTheme, Surface, Button, Dialog, Portal } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,10 +23,30 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const TRUST_TIER_INFO = {
-  good:       { icon: 'shield-check',   label: 'Good standing', color: '#146C34', bg: '#DCFCE7' },
-  watch:      { icon: 'alert',          label: 'On watch',       color: '#7D5700', bg: '#FEF3C7' },
-  restricted: { icon: 'block-helper',   label: 'Restricted',     color: '#BA1A1A', bg: '#FFDAD6' },
+  good:       { icon: 'shield-check',  label: 'Good Standing', color: '#146C34', bg: '#DCFCE7' },
+  watch:      { icon: 'alert-circle',  label: 'On Watch',      color: '#7D5700', bg: '#FEF3C7' },
+  restricted: { icon: 'block-helper',  label: 'Restricted',    color: '#BA1A1A', bg: '#FFDAD6' },
 };
+
+function InfoRow({ icon, label, value, valueColor }: {
+  icon: string;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  const { colors: c } = useTheme();
+  return (
+    <View style={styles.infoRow}>
+      <View style={[styles.infoIconWrap, { backgroundColor: c.primaryContainer }]}>
+        <MaterialCommunityIcons name={icon as any} size={18} color={c.onPrimaryContainer} />
+      </View>
+      <View style={styles.infoText}>
+        <Text style={[styles.infoLabel, { color: c.onSurfaceVariant }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: valueColor ?? c.onSurface }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -33,6 +54,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const c = theme.colors;
 
   const handleLogout = async () => {
@@ -49,116 +71,139 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   const tier = TRUST_TIER_INFO[user.trust_tier as keyof typeof TRUST_TIER_INFO] ?? TRUST_TIER_INFO.good;
+  const initials = user.name.trim().split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      <Animated.ScrollView
+        entering={FadeIn.duration(220)}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
-        <Animated.View
-          entering={FadeInDown.springify()}
-          style={[styles.hero, { backgroundColor: c.primaryContainer, paddingTop: insets.top + 24 }]}
+        {/* ── Gradient hero ── */}
+        <LinearGradient
+          colors={[c.primary, '#7A3C00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.hero, { paddingTop: insets.top + 24 }]}
         >
-          <Avatar.Text
-            size={80}
-            label={user.name.slice(0, 2).toUpperCase()}
-            style={{ backgroundColor: c.primary }}
-            labelStyle={{ color: c.onPrimary, fontSize: 32, fontFamily: 'Inter_700Bold' }}
-          />
-          <Text style={[styles.heroName, { color: c.onPrimaryContainer }]}>
-            {user.name}
-          </Text>
-          <Text style={{ color: c.onPrimaryContainer, opacity: 0.8, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-            {user.email}
-          </Text>
-          <View style={[styles.roleBadge, { backgroundColor: c.primary }]}>
-            <MaterialCommunityIcons name={ROLE_ICON[user.role] as any} size={14} color={c.onPrimary} />
-            <Text style={{ color: c.onPrimary, fontFamily: 'Inter_600SemiBold', fontSize: 13, marginLeft: 5 }}>
-              {ROLE_LABELS[user.role]}
-            </Text>
+          {/* Avatar */}
+          <View style={[styles.avatarRing, { borderColor: 'rgba(255,255,255,0.35)' }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
           </View>
-        </Animated.View>
 
-        <View style={{ padding: spacing.base }}>
-          {/* Trust tier (students/faculty only) */}
-          {user.role !== 'store_employee' && (
-            <Animated.View entering={FadeInDown.delay(60).springify()}>
-              <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-                <Text style={[styles.cardTitle, { color: c.onSurface }]}>Reliability Score</Text>
-                <View style={[styles.trustRow, { backgroundColor: tier.bg, borderRadius: radius.lg, padding: spacing.md }]}>
-                  <View style={[styles.tierIcon, { backgroundColor: tier.color + '20' }]}>
-                    <MaterialCommunityIcons name={tier.icon as any} size={24} color={tier.color} />
-                  </View>
-                  <View style={{ marginLeft: spacing.md }}>
-                    <Text style={{ color: tier.color, fontFamily: 'Inter_600SemiBold', fontSize: 15 }}>
-                      {tier.label}
-                    </Text>
-                    <Text style={{ color: tier.color, fontFamily: 'Inter_400Regular', fontSize: 12, opacity: 0.8, marginTop: 2 }}>
-                      {user.no_show_count} no-show{user.no_show_count !== 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                </View>
-              </Surface>
-            </Animated.View>
-          )}
+          <Text style={styles.heroName}>{user.name}</Text>
 
-          {/* Account info */}
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={{ marginTop: spacing.md }}>
-            <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-              <Text style={[styles.cardTitle, { color: c.onSurface }]}>Account Info</Text>
-              {user.register_number && (
-                <List.Item
-                  title="Register Number"
-                  description={user.register_number}
-                  left={(props) => <List.Icon {...props} icon="card-account-details-outline" />}
-                  titleStyle={{ color: c.onSurfaceVariant, fontSize: 13, fontFamily: 'Inter_400Regular' }}
-                  descriptionStyle={{ color: c.onSurface, fontFamily: 'Inter_600SemiBold' }}
-                />
-              )}
-              <List.Item
-                title="Email"
-                description={user.email}
-                left={(props) => <List.Icon {...props} icon="email-outline" />}
-                titleStyle={{ color: c.onSurfaceVariant, fontSize: 13, fontFamily: 'Inter_400Regular' }}
-                descriptionStyle={{ color: c.onSurface, fontFamily: 'Inter_600SemiBold' }}
+          {/* Role badge */}
+          <View style={[styles.roleBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <MaterialCommunityIcons name={ROLE_ICON[user.role] as any} size={13} color="#fff" />
+            <Text style={styles.roleBadgeText}>{ROLE_LABELS[user.role]}</Text>
+          </View>
+
+          {/* Edit button */}
+          <Pressable
+            onPress={() => setShowEditDialog(true)}
+            style={({ pressed }) => [styles.editBtn, { backgroundColor: 'rgba(255,255,255,0.15)', opacity: pressed ? 0.7 : 1 }]}
+          >
+            <MaterialCommunityIcons name="pencil-outline" size={14} color="#fff" />
+            <Text style={styles.editBtnText}>Edit Profile</Text>
+          </Pressable>
+        </LinearGradient>
+
+        {/* ── Trust tier (non-store) ── */}
+        {user.role !== 'store_employee' && (
+          <View style={styles.tierRow}>
+            <View style={[styles.tierCard, { backgroundColor: tier.bg }]}>
+              <MaterialCommunityIcons name={tier.icon as any} size={20} color={tier.color} />
+              <View style={{ marginLeft: spacing.sm }}>
+                <Text style={[styles.tierLabel, { color: tier.color }]}>{tier.label}</Text>
+                <Text style={[styles.tierSub, { color: tier.color }]}>
+                  {user.no_show_count} no-show{user.no_show_count !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.body}>
+          {/* ── Account details card ── */}
+          <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={0}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="account-circle-outline" size={18} color={c.primary} />
+              <Text style={[styles.cardTitle, { color: c.onSurface }]}>Account Details</Text>
+            </View>
+
+            {user.register_number && (
+              <InfoRow
+                icon="card-account-details-outline"
+                label="Register Number"
+                value={user.register_number}
               />
-              <List.Item
-                title="Email Verified"
-                description={user.is_email_verified ? 'Verified' : 'Not verified'}
-                left={(props) => (
-                  <List.Icon
-                    {...props}
-                    icon={user.is_email_verified ? 'check-circle' : 'alert-circle'}
-                    color={user.is_email_verified ? c.primary : c.error}
-                  />
-                )}
-                titleStyle={{ color: c.onSurfaceVariant, fontSize: 13, fontFamily: 'Inter_400Regular' }}
-                descriptionStyle={{ color: user.is_email_verified ? c.primary : c.error, fontFamily: 'Inter_600SemiBold' }}
-              />
-            </Surface>
-          </Animated.View>
+            )}
+            <InfoRow
+              icon="email-outline"
+              label="Email"
+              value={user.email}
+            />
+            <InfoRow
+              icon={user.is_email_verified ? 'check-circle' : 'alert-circle-outline'}
+              label="Email Status"
+              value={user.is_email_verified ? 'Verified' : 'Not verified'}
+              valueColor={user.is_email_verified ? c.primary : c.error}
+            />
+            <InfoRow
+              icon={ROLE_ICON[user.role] as string}
+              label="Role"
+              value={ROLE_LABELS[user.role] ?? user.role}
+            />
+          </Surface>
 
-          {/* Sign out */}
-          <Animated.View entering={FadeInDown.delay(140).springify()} style={{ marginTop: spacing.md }}>
-            <Button
-              mode="outlined"
-              onPress={() => setShowLogoutDialog(true)}
-              loading={loggingOut}
-              disabled={loggingOut}
-              style={[styles.signOutBtn, { borderColor: c.error }]}
-              contentStyle={{ height: 52 }}
-              labelStyle={{ color: c.error, fontFamily: 'Inter_600SemiBold' }}
-              icon="logout"
-            >
-              Sign Out
-            </Button>
-          </Animated.View>
+          {/* ── Sign out ── */}
+          <Pressable
+            onPress={() => setShowLogoutDialog(true)}
+            style={({ pressed }) => [styles.signOutRow, { backgroundColor: c.surface, opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={[styles.infoIconWrap, { backgroundColor: c.errorContainer }]}>
+              <MaterialCommunityIcons name="logout" size={18} color={c.onErrorContainer} />
+            </View>
+            <Text style={[styles.signOutText, { color: c.error }]}>Sign Out</Text>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={c.error} style={{ marginLeft: 'auto' }} />
+          </Pressable>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
-      {/* Sign-out confirmation dialog (M3-styled) */}
+      {/* ── Edit info dialog ── */}
+      <Portal>
+        <Dialog
+          visible={showEditDialog}
+          onDismiss={() => setShowEditDialog(false)}
+          style={{ borderRadius: radius.xl, backgroundColor: c.surface }}
+        >
+          <Dialog.Icon icon="monitor-account" size={40} />
+          <Dialog.Title style={{ textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: c.onSurface }}>
+            Edit on Web
+          </Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: c.onSurfaceVariant, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }}>
+              Profile details can only be edited from the CampusBite web app. Visit the website and sign in to make changes.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions style={{ justifyContent: 'center' }}>
+            <Button
+              mode="contained"
+              onPress={() => setShowEditDialog(false)}
+              style={{ borderRadius: radius.lg, minWidth: 100 }}
+              labelStyle={{ fontFamily: 'Inter_600SemiBold' }}
+            >
+              Got it
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* ── Sign-out dialog ── */}
       <Portal>
         <Dialog
           visible={showLogoutDialog}
@@ -184,6 +229,7 @@ export default function ProfileScreen() {
             <Button
               mode="contained"
               onPress={handleLogout}
+              loading={loggingOut}
               buttonColor={c.error}
               textColor={c.onError}
               style={{ borderRadius: radius.lg }}
@@ -200,18 +246,102 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: { alignItems: 'center', paddingHorizontal: spacing.base, paddingBottom: spacing.xl },
-  heroName: { fontSize: 22, fontFamily: 'Inter_700Bold', marginTop: spacing.md },
+
+  // Hero
+  hero: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  avatarRing: {
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 3,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  avatarCircle: {
+    width: 84, height: 84, borderRadius: 42,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 32, fontFamily: 'Inter_700Bold', color: '#fff',
+  },
+  heroName: {
+    fontSize: 22, fontFamily: 'Inter_700Bold', color: '#fff',
+    marginBottom: 4,
+  },
   roleBadge: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     borderRadius: radius.full,
+    paddingHorizontal: spacing.base, paddingVertical: 5,
+  },
+  roleBadgeText: {
+    color: '#fff', fontFamily: 'Inter_600SemiBold', fontSize: 13,
+  },
+
+  // Tier
+  tierRow: {
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.xs,
+    marginTop: -spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  tierCard: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    paddingHorizontal: spacing.base,
+  },
+  tierLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  tierSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', opacity: 0.8, marginTop: 1 },
+
+  // Body
+  body: { paddingHorizontal: spacing.base, gap: spacing.sm, marginTop: spacing.sm },
+
+  // Card
+  card: {
+    borderRadius: radius.xl,
+    padding: spacing.base,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  cardHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.sm, marginBottom: spacing.md,
+  },
+  cardTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+
+  // Info rows
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: spacing.sm, gap: spacing.md,
+  },
+  infoIconWrap: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  infoText: { flex: 1 },
+  infoLabel: { fontSize: 11, fontFamily: 'Inter_400Regular', marginBottom: 2 },
+  infoValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
+
+  // Edit button
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: 6,
     marginTop: spacing.md,
   },
-  card: { borderRadius: radius.xl, padding: spacing.base },
-  cardTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: spacing.md },
-  trustRow: { flexDirection: 'row', alignItems: 'center' },
-  tierIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  signOutBtn: { borderRadius: radius.lg },
+  editBtnText: {
+    color: '#fff', fontFamily: 'Inter_500Medium', fontSize: 13,
+  },
+
+  // Sign out
+  signOutRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: radius.xl,
+    padding: spacing.base,
+    gap: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
+  },
+  signOutText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 });

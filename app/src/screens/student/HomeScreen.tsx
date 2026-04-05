@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet, Pressable, RefreshControl, TextInput } from
 import { Text, useTheme, Surface, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -77,7 +77,7 @@ export default function HomeScreen() {
         locations={[0, 1]}
         style={[styles.headerGradient, { paddingTop: insets.top }]}
       >
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.header}>
+        <View style={styles.header}>
           {/* Top row: greeting + avatar */}
           <View style={styles.topRow}>
             <View style={{ flex: 1 }}>
@@ -118,10 +118,11 @@ export default function HomeScreen() {
               </Pressable>
             )}
           </View>
-        </Animated.View>
+        </View>
       </LinearGradient>
 
-      <FlatList
+      <Animated.FlatList
+        entering={FadeIn.duration(220)}
         data={filtered}
         keyExtractor={(s) => s._id}
         numColumns={1}
@@ -139,7 +140,7 @@ export default function HomeScreen() {
           <>
             {/* Active order banner */}
             {activeOrders.length > 0 && (
-              <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.bannerWrap}>
+              <View style={styles.bannerWrap}>
                 <Pressable onPress={() => navigation.navigate('OrderTracking', { orderId: activeOrders[0]._id })}>
                   <LinearGradient
                     colors={[c.primary, c.secondary ?? c.primary]}
@@ -161,19 +162,19 @@ export default function HomeScreen() {
                     </View>
                   </LinearGradient>
                 </Pressable>
-              </Animated.View>
+              </View>
             )}
 
             {/* Restriction warning */}
             {user?.trust_tier === 'restricted' && (
-              <Animated.View entering={FadeInDown.duration(250)} style={styles.bannerWrap}>
+              <View style={styles.bannerWrap}>
                 <Surface style={[styles.warnBanner, { backgroundColor: c.errorContainer }]} elevation={0}>
                   <Text style={{ fontSize: 18 }}>⛔</Text>
                   <Text style={[styles.warnText, { color: c.onErrorContainer }]}>
                     Ordering restricted due to no-shows. This will lift automatically.
                   </Text>
                 </Surface>
-              </Animated.View>
+              </View>
             )}
 
             {/* Section header */}
@@ -205,9 +206,8 @@ export default function HomeScreen() {
             </View>
           )
         }
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <Animated.View
-            entering={FadeInDown.delay(index * 60).springify()}
             layout={LinearTransition.springify()}
             style={{ paddingHorizontal: spacing.base, marginBottom: spacing.md }}
           >

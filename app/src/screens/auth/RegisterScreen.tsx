@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Text, TextInput, Button, useTheme, Surface } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -145,7 +145,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView
+        <Animated.ScrollView
+          entering={FadeIn.duration(220)}
           contentContainerStyle={[
             styles.scroll,
             { paddingTop: 24, paddingBottom: insets.bottom + 24 },
@@ -154,15 +155,15 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           showsVerticalScrollIndicator={false}
         >
           {/* Brand header */}
-          <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.brand}>
+          <View style={styles.brand}>
             <View style={[styles.logoCircle, { backgroundColor: c.primary }]}>
               <Text style={styles.logoEmoji}>🍽️</Text>
             </View>
             <Text style={[styles.appName, { color: c.primary }]}>CampusBite</Text>
-          </Animated.View>
+          </View>
 
           {/* Title + step indicator */}
-          <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.header}>
+          <View style={styles.header}>
             <Text style={[styles.title, { color: c.onSurface }]}>
               {step === 1 ? 'Choose your role' : 'Create account'}
             </Text>
@@ -202,15 +203,15 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                 {step === 1 ? 'Pick role' : 'Fill details'}
               </Text>
             </View>
-          </Animated.View>
+          </View>
 
           {/* Card */}
-          <Animated.View entering={FadeInDown.delay(120).springify()}>
+          <View>
             <Surface style={styles.card} elevation={2}>
 
               {/* ── Step 1: Role selection ── */}
               {step === 1 && (
-                <Animated.View entering={FadeInRight.duration(250)}>
+                <View>
                   <View style={styles.roleList}>
                     {ROLES.map((r) => {
                       const selected = role === r.value;
@@ -279,12 +280,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                   >
                     Continue
                   </Button>
-                </Animated.View>
+                </View>
               )}
 
               {/* ── Step 2: Registration form ── */}
               {step === 2 && (
-                <Animated.View entering={FadeInRight.duration(250)}>
+                <View>
                   <TextInput
                     label="Full name"
                     value={name}
@@ -460,23 +461,23 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                       Create Account
                     </Button>
                   </View>
-                </Animated.View>
+                </View>
               )}
             </Surface>
-          </Animated.View>
+          </View>
 
           {/* Footer */}
           {step === 1 && (
-            <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.loginRow}>
+            <View style={styles.loginRow}>
               <Text style={[styles.loginText, { color: c.onSurfaceVariant }]}>
                 Already have an account?{' '}
               </Text>
               <Pressable onPress={() => navigation.navigate('Login')}>
                 <Text style={[styles.loginLink, { color: c.primary }]}>Sign In</Text>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
   );

@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text, Button, useTheme, Surface } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 
 import type { LandingScreenProps } from '@/navigation/types';
@@ -27,14 +27,15 @@ export default function LandingScreen({ navigation }: LandingScreenProps) {
       style={styles.gradient}
     >
       <StatusBar style="dark" />
-      <View
+      <Animated.View
+        entering={FadeIn.duration(220)}
         style={[
           styles.container,
           { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 },
         ]}
       >
         {/* Hero */}
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.hero}>
+        <View style={styles.hero}>
           <View style={[styles.logoCircle, { backgroundColor: c.primaryContainer }]}>
             <Text style={styles.logoEmoji}>🍽️</Text>
           </View>
@@ -42,10 +43,10 @@ export default function LandingScreen({ navigation }: LandingScreenProps) {
           <Text style={[styles.tagline, { color: c.onSurfaceVariant }]}>
             Order food from your campus canteen
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Feature tiles */}
-        <Animated.View entering={FadeInDown.delay(120).springify()} style={styles.tiles}>
+        <View style={styles.tiles}>
           {FEATURES.map((f) => (
             <Surface key={f.label} style={styles.tile} elevation={2}>
               <Text style={styles.tileIcon}>{f.icon}</Text>
@@ -55,10 +56,10 @@ export default function LandingScreen({ navigation }: LandingScreenProps) {
               </View>
             </Surface>
           ))}
-        </Animated.View>
+        </View>
 
         {/* Actions */}
-        <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.actions}>
+        <View style={styles.actions}>
           <Button
             mode="contained"
             onPress={() => navigation.navigate('Login')}
@@ -77,8 +78,8 @@ export default function LandingScreen({ navigation }: LandingScreenProps) {
           >
             Create Account
           </Button>
-        </Animated.View>
-      </View>
+        </View>
+      </Animated.View>
     </LinearGradient>
   );
 }

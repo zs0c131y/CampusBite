@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ordersApi } from '@/api/orders';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,11 +19,11 @@ interface Stats {
 
 function StatCard({ emoji, label, value, color, bgColor }: { emoji: string; label: string; value: string; color: string; bgColor: string }) {
   return (
-    <Animated.View entering={FadeInDown.springify()} style={[styles.statCard, { backgroundColor: bgColor }]}>
+    <View style={[styles.statCard, { backgroundColor: bgColor }]}>
       <Text style={{ fontSize: 32, marginBottom: spacing.xs }}>{emoji}</Text>
       <Text variant="headlineSmall" style={{ color, fontWeight: '700' }}>{value}</Text>
       <Text variant="bodySmall" style={{ color, opacity: 0.75, marginTop: 2 }}>{label}</Text>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -68,7 +68,8 @@ export default function DashboardScreen() {
         <Text variant="titleLarge" style={{ color: c.onSurface, fontWeight: '700' }}>Dashboard 📊</Text>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
+        entering={FadeIn.duration(220)}
         contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchOrders(); }} colors={[c.primary]} />}
@@ -83,7 +84,7 @@ export default function DashboardScreen() {
 
         {/* Recent orders */}
         {recent.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
+          <View>
             <Text variant="titleMedium" style={[styles.sectionTitle, { color: c.onSurface }]}>Recent Orders</Text>
             <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
               {recent.map((order, i) => (
@@ -101,9 +102,9 @@ export default function DashboardScreen() {
                 </View>
               ))}
             </Surface>
-          </Animated.View>
+          </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

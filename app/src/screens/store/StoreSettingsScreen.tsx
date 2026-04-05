@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Text, useTheme, Surface, TextInput, Button } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { storesApi } from '@/api/stores';
@@ -69,31 +69,25 @@ export default function StoreSettingsScreen() {
         <Text variant="titleLarge" style={{ color: c.onSurface, fontWeight: '700' }}>Store Settings ⚙️</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.springify()}>
-          <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-            <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>🏪 Store Info</Text>
-            <TextInput label="Store name" value={name} onChangeText={setName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: radius.md }} />
-            <TextInput label="Description" value={description} onChangeText={setDescription} mode="outlined" multiline numberOfLines={2} style={styles.input} outlineStyle={{ borderRadius: radius.md }} />
-          </Surface>
-        </Animated.View>
+      <Animated.ScrollView entering={FadeIn.duration(220)} contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
+        <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
+          <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>🏪 Store Info</Text>
+          <TextInput label="Store name" value={name} onChangeText={setName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: radius.md }} />
+          <TextInput label="Description" value={description} onChangeText={setDescription} mode="outlined" multiline numberOfLines={2} style={styles.input} outlineStyle={{ borderRadius: radius.md }} />
+        </Surface>
 
-        <Animated.View entering={FadeInDown.delay(60).springify()} style={{ marginTop: spacing.md }}>
-          <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-            <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>💳 Payment</Text>
-            <TextInput label="UPI ID (e.g. store@paytm)" value={upiId} onChangeText={setUpiId} mode="outlined" autoCapitalize="none" style={styles.input} outlineStyle={{ borderRadius: radius.md }} left={<TextInput.Icon icon="qrcode" />} />
-          </Surface>
-        </Animated.View>
+        <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
+          <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>💳 Payment</Text>
+          <TextInput label="UPI ID (e.g. store@paytm)" value={upiId} onChangeText={setUpiId} mode="outlined" autoCapitalize="none" style={styles.input} outlineStyle={{ borderRadius: radius.md }} left={<TextInput.Icon icon="qrcode" />} />
+        </Surface>
 
-        <Animated.View entering={FadeInDown.delay(100).springify()} style={{ marginTop: spacing.md }}>
-          <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-            <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>🕐 Operating Hours</Text>
-            <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <TextInput label="Opening time" value={openTime} onChangeText={setOpenTime} mode="outlined" placeholder="9:00 AM" style={[styles.input, { flex: 1 }]} outlineStyle={{ borderRadius: radius.md }} />
-              <TextInput label="Closing time" value={closeTime} onChangeText={setCloseTime} mode="outlined" placeholder="6:00 PM" style={[styles.input, { flex: 1 }]} outlineStyle={{ borderRadius: radius.md }} />
-            </View>
-          </Surface>
-        </Animated.View>
+        <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
+          <Text variant="titleSmall" style={[styles.sectionTitle, { color: c.onSurface }]}>🕐 Operating Hours</Text>
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <TextInput label="Opening time" value={openTime} onChangeText={setOpenTime} mode="outlined" placeholder="9:00 AM" style={[styles.input, { flex: 1 }]} outlineStyle={{ borderRadius: radius.md }} />
+            <TextInput label="Closing time" value={closeTime} onChangeText={setCloseTime} mode="outlined" placeholder="6:00 PM" style={[styles.input, { flex: 1 }]} outlineStyle={{ borderRadius: radius.md }} />
+          </View>
+        </Surface>
 
         <Button
           mode="contained"
@@ -107,7 +101,7 @@ export default function StoreSettingsScreen() {
         >
           Save Settings
         </Button>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

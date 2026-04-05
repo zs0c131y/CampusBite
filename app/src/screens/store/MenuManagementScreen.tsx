@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, FlatList, StyleSheet, Pressable, Alert, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface, FAB, Switch, ActivityIndicator, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 
@@ -118,7 +118,8 @@ export default function MenuManagementScreen() {
         <Text variant="bodySmall" style={{ color: c.onSurfaceVariant }}>{menu.length} items</Text>
       </View>
 
-      <FlatList
+      <Animated.FlatList
+        entering={FadeIn.duration(220)}
         data={menu}
         keyExtractor={(i) => i._id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchMenu(); }} colors={[c.primary]} />}
@@ -135,10 +136,8 @@ export default function MenuManagementScreen() {
             </View>
           )
         }
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 40).springify()}>
-            <MenuItemRow item={item} onToggle={() => handleToggle(item)} onDelete={() => handleDelete(item)} />
-          </Animated.View>
+        renderItem={({ item }) => (
+          <MenuItemRow item={item} onToggle={() => handleToggle(item)} onDelete={() => handleDelete(item)} />
         )}
       />
 

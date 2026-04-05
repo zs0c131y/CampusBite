@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Text, useTheme, Surface, Button, TextInput, Dialog, Portal } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { ordersApi } from '@/api/orders';
@@ -72,12 +72,13 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
+        entering={FadeIn.duration(220)}
         contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Status hero */}
-        <Animated.View entering={FadeInDown.springify()}>
+        <View>
           <Surface
             style={[styles.statusCard, {
               backgroundColor: status === 'ready' ? c.primaryContainer : c.elevation.level2,
@@ -101,83 +102,77 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
               </Text>
             </View>
           </Surface>
-        </Animated.View>
+        </View>
 
         {/* OTP verification */}
         {status === 'ready' && (
-          <Animated.View entering={FadeInDown.delay(60).springify()}>
-            <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
-              <View style={styles.cardHeader}>
-                <MaterialCommunityIcons name="shield-check-outline" size={18} color={c.primary} />
-                <Text style={[styles.cardTitle, { color: c.onSurface }]}>Verify Pickup OTP</Text>
-              </View>
-              <TextInput
-                label="Enter 6-digit OTP"
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                maxLength={6}
-                mode="outlined"
-                style={{ marginBottom: spacing.md }}
-                outlineStyle={{ borderRadius: radius.md }}
-              />
-              <Button
-                mode="contained"
-                onPress={handleVerifyOtp}
-                loading={verifying}
-                disabled={verifying || otp.length < 6}
-                style={{ borderRadius: radius.lg }}
-                contentStyle={{ height: 48 }}
-                labelStyle={{ fontFamily: 'Inter_700Bold' }}
-                icon="check-circle-outline"
-              >
-                Verify &amp; Complete Order
-              </Button>
-            </Surface>
-          </Animated.View>
+          <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="shield-check-outline" size={18} color={c.primary} />
+              <Text style={[styles.cardTitle, { color: c.onSurface }]}>Verify Pickup OTP</Text>
+            </View>
+            <TextInput
+              label="Enter 6-digit OTP"
+              value={otp}
+              onChangeText={setOtp}
+              keyboardType="number-pad"
+              maxLength={6}
+              mode="outlined"
+              style={{ marginBottom: spacing.md }}
+              outlineStyle={{ borderRadius: radius.md }}
+            />
+            <Button
+              mode="contained"
+              onPress={handleVerifyOtp}
+              loading={verifying}
+              disabled={verifying || otp.length < 6}
+              style={{ borderRadius: radius.lg }}
+              contentStyle={{ height: 48 }}
+              labelStyle={{ fontFamily: 'Inter_700Bold' }}
+              icon="check-circle-outline"
+            >
+              Verify &amp; Complete Order
+            </Button>
+          </Surface>
         )}
 
         {/* Items */}
-        <Animated.View entering={FadeInDown.delay(120).springify()}>
-          <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
-            <View style={styles.cardHeader}>
-              <MaterialCommunityIcons name="food-variant" size={18} color={c.primary} />
-              <Text style={[styles.cardTitle, { color: c.onSurface }]}>Items</Text>
+        <Surface style={[styles.card, { backgroundColor: c.surface, marginTop: spacing.md }]} elevation={1}>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="food-variant" size={18} color={c.primary} />
+            <Text style={[styles.cardTitle, { color: c.onSurface }]}>Items</Text>
+          </View>
+          {order.items.map((item, i) => (
+            <View key={i} style={styles.itemRow}>
+              <Text style={{ color: c.onSurface, fontFamily: 'Inter_400Regular', fontSize: 14, flex: 1 }}>
+                {item.name} × {item.quantity}
+              </Text>
+              <Text style={{ color: c.onSurface, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+                {formatCurrency(item.total)}
+              </Text>
             </View>
-            {order.items.map((item, i) => (
-              <View key={i} style={styles.itemRow}>
-                <Text style={{ color: c.onSurface, fontFamily: 'Inter_400Regular', fontSize: 14, flex: 1 }}>
-                  {item.name} × {item.quantity}
-                </Text>
-                <Text style={{ color: c.onSurface, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
-                  {formatCurrency(item.total)}
-                </Text>
-              </View>
-            ))}
-            <View style={[styles.itemRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.outlineVariant, marginTop: spacing.sm, paddingTop: spacing.sm }]}>
-              <Text style={{ color: c.onSurface, fontFamily: 'Inter_700Bold', fontSize: 14 }}>Total</Text>
-              <Text style={{ color: c.primary, fontFamily: 'Inter_700Bold', fontSize: 15 }}>{formatCurrency(order.total_amount)}</Text>
-            </View>
-          </Surface>
-        </Animated.View>
+          ))}
+          <View style={[styles.itemRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.outlineVariant, marginTop: spacing.sm, paddingTop: spacing.sm }]}>
+            <Text style={{ color: c.onSurface, fontFamily: 'Inter_700Bold', fontSize: 14 }}>Total</Text>
+            <Text style={{ color: c.primary, fontFamily: 'Inter_700Bold', fontSize: 15 }}>{formatCurrency(order.total_amount)}</Text>
+          </View>
+        </Surface>
 
         {/* Special instructions */}
         {order.special_instructions && (
-          <Animated.View entering={FadeInDown.delay(160).springify()}>
-            <Surface style={[styles.card, { backgroundColor: c.elevation.level2, marginTop: spacing.md }]} elevation={0}>
-              <View style={styles.cardHeader}>
-                <MaterialCommunityIcons name="pencil-outline" size={16} color={c.onSurfaceVariant} />
-                <Text style={{ color: c.onSurfaceVariant, fontFamily: 'Inter_500Medium', fontSize: 13 }}>
-                  Special Instructions
-                </Text>
-              </View>
-              <Text style={{ color: c.onSurface, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-                {order.special_instructions}
+          <Surface style={[styles.card, { backgroundColor: c.elevation.level2, marginTop: spacing.md }]} elevation={0}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="pencil-outline" size={16} color={c.onSurfaceVariant} />
+              <Text style={{ color: c.onSurfaceVariant, fontFamily: 'Inter_500Medium', fontSize: 13 }}>
+                Special Instructions
               </Text>
-            </Surface>
-          </Animated.View>
+            </View>
+            <Text style={{ color: c.onSurface, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
+              {order.special_instructions}
+            </Text>
+          </Surface>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Success dialog */}
       <Portal>

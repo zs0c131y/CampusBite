@@ -111,12 +111,7 @@ export default function CartScreen() {
           </Text>
           <Button
             mode="contained"
-            onPress={() => {
-              // CartScreen lives inside CartTab (tab nav) — navigate parent to HomeTab
-              const parent = navigation.getParent();
-              if (parent) parent.navigate('HomeTab' as never);
-              else navigation.navigate('Home');
-            }}
+            onPress={() => (navigation as any).navigate('HomeTab')}
             style={styles.emptyBtn}
             contentStyle={{ height: 52 }}
             labelStyle={{ fontFamily: 'Inter_600SemiBold', fontSize: 15 }}

@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-nat
 import { Text, useTheme, Surface, Chip, Button, ActivityIndicator, Dialog, Portal } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -228,7 +228,9 @@ export default function StoreOrdersScreen() {
         ))}
       </View>
 
-      <FlatList
+      <Animated.FlatList
+        entering={FadeIn.duration(220)}
+        key={filter}
         data={orders}
         keyExtractor={(o) => o._id}
         refreshControl={
@@ -257,14 +259,12 @@ export default function StoreOrdersScreen() {
             </View>
           )
         }
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 40).springify()}>
-            <OrderRow
-              order={item}
-              onPress={() => navigation.navigate('OrderDetail', { orderId: item._id })}
-              onAction={() => handleAction(item)}
-            />
-          </Animated.View>
+        renderItem={({ item }) => (
+          <OrderRow
+            order={item}
+            onPress={() => navigation.navigate('OrderDetail', { orderId: item._id })}
+            onAction={() => handleAction(item)}
+          />
         )}
       />
 

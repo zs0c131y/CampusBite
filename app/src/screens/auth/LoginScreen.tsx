@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Text, TextInput, Button, useTheme, Surface } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -72,7 +72,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView
+        <Animated.ScrollView
+          entering={FadeIn.duration(220)}
           contentContainerStyle={[
             styles.scroll,
             { paddingTop: 24, paddingBottom: insets.bottom + 24 },
@@ -81,23 +82,23 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           showsVerticalScrollIndicator={false}
         >
           {/* Brand header */}
-          <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.brand}>
+          <View style={styles.brand}>
             <View style={[styles.logoCircle, { backgroundColor: c.primary }]}>
               <Text style={styles.logoEmoji}>🍽️</Text>
             </View>
             <Text style={[styles.appName, { color: c.primary }]}>CampusBite</Text>
-          </Animated.View>
+          </View>
 
           {/* Title */}
-          <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.header}>
+          <View style={styles.header}>
             <Text style={[styles.title, { color: c.onSurface }]}>Welcome back</Text>
             <Text style={[styles.subtitle, { color: c.onSurfaceVariant }]}>
               Sign in to continue ordering
             </Text>
-          </Animated.View>
+          </View>
 
           {/* Form */}
-          <Animated.View entering={FadeInDown.delay(120).springify()}>
+          <View>
             <Surface style={styles.card} elevation={2}>
               <TextInput
                 label="Email address"
@@ -143,12 +144,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               </Pressable>
 
               {!!error && (
-                <Animated.View
-                  entering={FadeInDown.duration(200)}
-                  style={[styles.errorBox, { backgroundColor: c.errorContainer }]}
-                >
+                <View style={[styles.errorBox, { backgroundColor: c.errorContainer }]}>
                   <Text style={[styles.errorText, { color: c.onErrorContainer }]}>{error}</Text>
-                </Animated.View>
+                </View>
               )}
 
               <Button
@@ -163,18 +161,18 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 Sign In
               </Button>
             </Surface>
-          </Animated.View>
+          </View>
 
           {/* Footer */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.registerRow}>
+          <View style={styles.registerRow}>
             <Text style={[styles.registerText, { color: c.onSurfaceVariant }]}>
               Don't have an account?{' '}
             </Text>
             <Pressable onPress={() => navigation.navigate('Register')}>
               <Text style={[styles.registerLink, { color: c.primary }]}>Register</Text>
             </Pressable>
-          </Animated.View>
-        </ScrollView>
+          </View>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
