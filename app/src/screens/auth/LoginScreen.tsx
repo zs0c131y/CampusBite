@@ -43,7 +43,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     } catch (e: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       if (e.code === 'ERR_NETWORK' || e.message === 'Network Error') {
-        setError('Cannot reach the server. Make sure the backend is running and your device is on the same network.');
+        setError('Cannot reach the server. Check your internet connection and try again.');
       } else {
         setError(e.response?.data?.message ?? e.message ?? 'Login failed. Please try again.');
       }

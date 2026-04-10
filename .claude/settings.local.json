@@ -3,7 +3,8 @@
     "allow": [
       "Bash(wc:*)",
       "Bash(grep:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Skill(update-config)"
     ]
   }
 }

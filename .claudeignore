@@ -1,0 +1,4 @@
+# Lock files — large, auto-generated, no value for context
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
