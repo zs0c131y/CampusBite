@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native';
-import { Text, useTheme, Surface, Chip, Button, ActivityIndicator, Dialog, Portal } from 'react-native-paper';
+import { Text, useTheme, Surface, Button, ActivityIndicator, Dialog, Portal } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -39,93 +38,141 @@ const FILTERS = [
 ];
 
 function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => void; onAction: () => void }) {
-  const theme = useTheme();
-  const c = theme.colors;
-  const status = order.order_status as OrderStatus;
-  const next = NEXT_STATUS[status];
-  const isUrgent = status === 'placed';
+  const { colors: c } = useTheme();
+  const status  = order.order_status as OrderStatus;
+  const next    = NEXT_STATUS[status];
+  const isActive = status === 'placed' || status === 'accepted' || status === 'processing' || status === 'ready';
 
-  const badgeBg = isUrgent ? c.primary : c.elevation.level3;
-  const badgeFg = isUrgent ? c.onPrimary : c.onSurface;
+  // For placed orders, derive what the action button should show:
+  // 1. payment pending  → "Confirm Payment" (opens dialog)
+  // 2. payment done, commitment pending → disabled "Waiting for customer…"
+  // 3. payment done, commitment confirmed (or not required) → "Accept Order"
+  const paymentPending = status === 'placed' && order.payment_status === 'pending';
+  const waitingCommitment = status === 'placed' && order.payment_status === 'success' && !order.is_commitment_confirmed;
+
+  const iconBg  = isActive ? c.primaryContainer : c.surfaceVariant;
+  const iconFg  = isActive ? c.onPrimaryContainer : c.onSurfaceVariant;
+  const labelFg = isActive ? c.primary : c.onSurfaceVariant;
 
   return (
-    <Pressable onPress={onPress}>
-      <Surface
+    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>
+      <View
         style={[
-          styles.orderCard,
+          styles.card,
           {
-            backgroundColor: isUrgent ? c.primaryContainer + '40' : c.surface,
-            borderWidth: isUrgent ? 1.5 : StyleSheet.hairlineWidth,
-            borderColor: isUrgent ? c.primary : c.outlineVariant,
+            backgroundColor: isActive ? c.elevation.level2 : c.surface,
+            borderColor: isActive ? c.primary + '55' : c.outlineVariant,
+            borderWidth: isActive ? 1.5 : StyleSheet.hairlineWidth,
           },
         ]}
-        elevation={1}
       >
-        <View style={styles.cardTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.orderNumber, { color: c.onSurface }]}>
-              #{order.order_number}
-            </Text>
-            <View style={styles.timeRow}>
-              <MaterialCommunityIcons name="clock-outline" size={12} color={c.onSurfaceVariant} />
-              <Text style={[styles.metaText, { color: c.onSurfaceVariant }]}>
-                {formatTime(order.created_at)}
-              </Text>
-              <Text style={[styles.metaDot, { color: c.outlineVariant }]}>·</Text>
-              <Text style={[styles.metaText, { color: c.onSurfaceVariant }]}>
-                {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-              </Text>
-              <Text style={[styles.metaDot, { color: c.outlineVariant }]}>·</Text>
-              <Text style={[styles.metaText, { color: c.onSurface, fontFamily: 'Inter_600SemiBold' }]}>
-                {formatCurrency(order.total_amount)}
-              </Text>
-            </View>
-          </View>
+        {/* Left accent strip */}
+        {isActive && <View style={[styles.accentStrip, { backgroundColor: c.primary }]} />}
 
-          {/* Status badge */}
-          <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
-            <MaterialCommunityIcons name={STATUS_ICON[status] as any} size={13} color={badgeFg} />
-            <Text style={[styles.statusLabel, { color: badgeFg }]}>
-              {ORDER_STATUS_LABELS[status]}
-            </Text>
-          </View>
+        {/* Status icon */}
+        <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+          <MaterialCommunityIcons name={STATUS_ICON[status] as any} size={22} color={iconFg} />
         </View>
 
-        {/* Items preview */}
-        <View style={styles.itemsRow}>
-          <MaterialCommunityIcons name="food-variant" size={13} color={c.onSurfaceVariant} />
+        {/* Main content */}
+        <View style={styles.cardBody}>
+          <View style={styles.cardRow}>
+            <Text style={[styles.orderNum, { color: c.onSurface }]}>#{order.order_number}</Text>
+            {isActive && (
+              <View style={[styles.liveBadge, { backgroundColor: c.primary }]}>
+                <View style={[styles.liveDot, { backgroundColor: c.onPrimary }]} />
+                <Text style={[styles.liveText, { color: c.onPrimary }]}>LIVE</Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }} />
+            <MaterialCommunityIcons name="chevron-right" size={20} color={c.onSurfaceVariant} />
+          </View>
+
           <Text style={[styles.itemsText, { color: c.onSurfaceVariant }]} numberOfLines={1}>
             {order.items.map((i) => `${i.name} ×${i.quantity}`).join(' · ')}
           </Text>
+
+          <View style={[styles.divider, { backgroundColor: c.outlineVariant }]} />
+
+          <View style={styles.footerRow}>
+            <View style={[styles.statusPill, { backgroundColor: iconBg }]}>
+              <Text style={[styles.statusPillText, { color: labelFg }]}>
+                {ORDER_STATUS_LABELS[status]}
+              </Text>
+            </View>
+            <View style={styles.metaGroup}>
+              <MaterialCommunityIcons name="shopping-outline" size={12} color={c.onSurfaceVariant} />
+              <Text style={[styles.metaText, { color: c.onSurfaceVariant }]}>{order.items.length}</Text>
+              <Text style={[styles.metaDot, { color: c.outlineVariant }]}>·</Text>
+              <Text style={[styles.metaAmount, { color: c.onSurface }]}>{formatCurrency(order.total_amount)}</Text>
+              <Text style={[styles.metaDot, { color: c.outlineVariant }]}>·</Text>
+              <Text style={[styles.metaText, { color: c.onSurfaceVariant }]}>{formatTime(order.created_at)}</Text>
+            </View>
+          </View>
+
+          {status === 'placed' && paymentPending && (
+            <Button
+              mode="contained"
+              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              style={styles.actionBtn}
+              contentStyle={styles.actionBtnContent}
+              labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+              icon="cash-check"
+            >
+              Confirm Payment
+            </Button>
+          )}
+          {status === 'placed' && waitingCommitment && (
+            <Button
+              mode="contained-tonal"
+              disabled
+              style={styles.actionBtn}
+              contentStyle={styles.actionBtnContent}
+              labelStyle={{ fontSize: 13, fontFamily: 'Inter_500Medium' }}
+              icon="clock-outline"
+            >
+              Waiting for customer…
+            </Button>
+          )}
+          {status === 'placed' && !paymentPending && !waitingCommitment && (
+            <Button
+              mode="contained"
+              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              style={styles.actionBtn}
+              contentStyle={styles.actionBtnContent}
+              labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+              icon="check-circle-outline"
+            >
+              Accept Order
+            </Button>
+          )}
+          {next && status !== 'placed' && (
+            <Button
+              mode="contained"
+              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              style={styles.actionBtn}
+              contentStyle={styles.actionBtnContent}
+              labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
+              icon="arrow-right"
+            >
+              {next.label}
+            </Button>
+          )}
+          {status === 'ready' && (
+            <Button
+              mode="outlined"
+              onPress={(e) => { e.stopPropagation?.(); onPress(); }}
+              style={styles.actionBtn}
+              contentStyle={styles.actionBtnContent}
+              labelStyle={{ fontSize: 13, fontFamily: 'Inter_500Medium' }}
+              icon="shield-check-outline"
+            >
+              Verify OTP &amp; Complete
+            </Button>
+          )}
         </View>
 
-        {/* Action button */}
-        {next && (
-          <Button
-            mode="contained"
-            compact
-            onPress={(e) => { e.stopPropagation?.(); onAction(); }}
-            style={[styles.actionBtn, { backgroundColor: c.primary }]}
-            labelStyle={{ color: c.onPrimary, fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
-            icon="arrow-right"
-          >
-            {next.label}
-          </Button>
-        )}
-
-        {status === 'ready' && (
-          <Button
-            mode="outlined"
-            compact
-            onPress={(e) => { e.stopPropagation?.(); onPress(); }}
-            style={styles.actionBtn}
-            labelStyle={{ fontSize: 13, fontFamily: 'Inter_500Medium' }}
-            icon="shield-check-outline"
-          >
-            Verify OTP &amp; Complete
-          </Button>
-        )}
-      </Surface>
+      </View>
     </Pressable>
   );
 }
@@ -166,7 +213,8 @@ export default function StoreOrdersScreen() {
     const next = NEXT_STATUS[status];
     if (!next) return;
 
-    if (status === 'placed') {
+    // Placed + payment pending → open payment confirmation dialog
+    if (status === 'placed' && order.payment_status === 'pending') {
       setConfirmOrder(order);
       return;
     }
@@ -174,24 +222,23 @@ export default function StoreOrdersScreen() {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await ordersApi.updateStatus(order._id, next.next);
-      fetchOrders();
+      await fetchOrders();
     } catch (e: any) {
-      // surface error inline — could replace with Snackbar if desired
-      console.error(e);
+      console.error('updateStatus error:', (e as any).response?.data ?? e);
     }
   };
 
+  // Only confirms payment — does NOT accept the order.
+  // After payment is confirmed the card re-renders: either "Waiting for customer"
+  // (if commitment is required) or "Accept Order" (if commitment is not needed).
   const handleConfirmPayment = async () => {
     if (!confirmOrder) return;
-    const next = NEXT_STATUS[confirmOrder.order_status as OrderStatus];
-    if (!next) return;
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await ordersApi.confirmPayment(confirmOrder._id);
-      await ordersApi.updateStatus(confirmOrder._id, next.next);
-      fetchOrders();
+      await fetchOrders();
     } catch (e: any) {
-      console.error(e);
+      console.error('confirmPayment error:', (e as any).response?.data ?? e);
     } finally {
       setConfirmOrder(null);
     }
@@ -212,24 +259,32 @@ export default function StoreOrdersScreen() {
       </View>
 
       {/* Filters */}
-      <View style={styles.filterRow}>
-        {FILTERS.map((f) => (
-          <Chip
-            key={f.value}
-            selected={filter === f.value}
-            onPress={() => setFilter(f.value)}
-            style={{ marginRight: spacing.xs }}
-            showSelectedOverlay
-            compact
-            icon={f.icon}
-          >
-            {f.label}
-          </Chip>
-        ))}
+      <View style={[styles.filterRow, { backgroundColor: c.surfaceVariant }]}>
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <Pressable
+              key={f.value}
+              onPress={() => setFilter(f.value)}
+              style={[
+                styles.filterPill,
+                active && { backgroundColor: c.primary },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={f.icon as any}
+                size={14}
+                color={active ? c.onPrimary : c.onSurfaceVariant}
+              />
+              <Text style={[styles.filterPillText, { color: active ? c.onPrimary : c.onSurfaceVariant }]}>
+                {f.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <Animated.FlatList
-        entering={FadeIn.duration(220)}
+      <FlatList
         key={filter}
         data={orders}
         keyExtractor={(o) => o._id}
@@ -324,30 +379,77 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+    borderRadius: radius.full,
+    padding: 4,
+    gap: 2,
+  },
+  filterPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
   },
 
   // Card
-  orderCard: { borderRadius: radius.xl, padding: spacing.base },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.sm },
-  orderNumber: { fontSize: 15, fontFamily: 'Inter_700Bold', marginBottom: 3 },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
-  metaText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  metaDot: { fontSize: 12 },
-  statusBadge: {
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    paddingVertical: spacing.md,
+    paddingRight: spacing.md,
+    paddingLeft: spacing.sm,
+    gap: spacing.md,
+  },
+  accentStrip: {
+    position: 'absolute',
+    left: 0, top: 0, bottom: 0,
+    width: 4,
+  },
+  iconCircle: {
+    width: 48, height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  cardBody: { flex: 1, gap: 4 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  orderNum: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  itemsText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    maxWidth: 150,
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  statusLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
-  itemsRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: spacing.xs },
-  itemsText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular' },
-  actionBtn: { marginTop: spacing.md, borderRadius: radius.lg },
+  statusPill: { borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2 },
+  statusPillText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  metaGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  metaDot: { fontSize: 12 },
+  metaAmount: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  liveBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.full,
+  },
+  liveDot: { width: 5, height: 5, borderRadius: 3 },
+  liveText: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  actionBtn: { marginTop: spacing.xs, borderRadius: radius.lg },
+  actionBtnContent: { height: 44, paddingHorizontal: spacing.sm },
 
   // Empty
   center: { paddingTop: 60, alignItems: 'center' },

@@ -6,7 +6,7 @@ export const storesApi = {
 
   get: (id: string) => api.get<ApiResponse<Store>>(`/stores/${id}`),
 
-  menu: (id: string) => api.get<ApiResponse<{ menu: MenuItem[] }>>(`/stores/${id}/menu`),
+  menu: (id: string) => api.get<ApiResponse<{ menuItems: MenuItem[] }>>(`/stores/${id}/menu`),
 
   update: (id: string, formData: FormData) =>
     api.put<ApiResponse<Store>>(`/stores/${id}`, formData),

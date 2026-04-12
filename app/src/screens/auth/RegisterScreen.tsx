@@ -441,24 +441,24 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
                   <View style={styles.stepBtns}>
                     <Button
-                      mode="outlined"
-                      onPress={goBack}
-                      style={[styles.btn, { flex: 1 }]}
-                      contentStyle={styles.btnContent}
-                      labelStyle={styles.btnLabel}
-                    >
-                      Back
-                    </Button>
-                    <Button
                       mode="contained"
                       onPress={handleRegister}
                       loading={loading}
                       disabled={loading}
-                      style={[styles.btn, { flex: 2 }]}
+                      style={styles.btn}
                       contentStyle={styles.btnContent}
                       labelStyle={styles.btnLabel}
                     >
                       Create Account
+                    </Button>
+                    <Button
+                      mode="outlined"
+                      onPress={goBack}
+                      style={styles.btn}
+                      contentStyle={styles.btnContent}
+                      labelStyle={styles.btnLabel}
+                    >
+                      Back
                     </Button>
                   </View>
                 </View>
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   btn: { borderRadius: radius.lg },
   btnContent: { height: 52 },
   btnLabel: { fontSize: 15, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.2 },
-  stepBtns: { flexDirection: 'row', gap: spacing.sm },
+  stepBtns: { flexDirection: 'column', gap: spacing.sm },
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',

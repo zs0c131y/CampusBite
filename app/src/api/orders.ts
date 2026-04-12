@@ -22,7 +22,7 @@ export const ordersApi = {
     api.get<ApiResponse<{ order_status: string; payment_status: string; otp?: string }>>(`/orders/${id}/poll-status`),
 
   confirmPayment: (id: string, transactionId?: string) =>
-    api.patch<ApiResponse<Order>>(`/orders/${id}/payment-status`, { transaction_id: transactionId }),
+    api.patch<ApiResponse<Order>>(`/orders/${id}/payment-status`, { paymentStatus: 'success', transaction_id: transactionId }),
 
   updateStatus: (id: string, status: string) =>
     api.patch<ApiResponse<Order>>(`/orders/${id}/status`, { status }),

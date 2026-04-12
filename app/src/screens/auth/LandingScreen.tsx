@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   },
   actions: { gap: spacing.sm },
   btn: { borderRadius: radius.lg },
-  btnContent: { height: 52 },
+  btnContent: { height: 52, paddingHorizontal: 8 },
   btnLabel: { fontSize: 16, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.2 },
 });
