@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 import * as Haptics from 'expo-haptics';
 
 import { authApi } from '@/api/auth';
@@ -44,7 +44,7 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
       locations={[0, 0.4, 1]}
       style={styles.gradient}
     >
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.background)} />
       <View style={[styles.blob1, { backgroundColor: c.primary + '18' }]} />
       <View style={[styles.blob2, { backgroundColor: c.tertiary + '14' }]} />
 

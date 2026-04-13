@@ -4,7 +4,7 @@ import { Text, Button, useTheme, Surface } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 
 import type { LandingScreenProps } from '@/navigation/types';
 import { spacing, radius } from '@/theme';
@@ -26,7 +26,7 @@ export default function LandingScreen({ navigation }: LandingScreenProps) {
       locations={[0, 0.5, 1]}
       style={styles.gradient}
     >
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.background)} />
       <Animated.View
         entering={FadeIn.duration(220)}
         style={[

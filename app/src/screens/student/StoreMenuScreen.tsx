@@ -14,9 +14,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 
-import { storesApi } from '@/api/stores';
+import { storesApi, resolveMenuItems } from '@/api/stores';
 import { SERVER_URL } from '@/api/client';
 import { useCart } from '@/contexts/CartContext';
 import type { MenuItem, Store } from '@/api/types';
@@ -62,9 +62,9 @@ export default function StoreMenuScreen({ route, navigation }: StoreMenuScreenPr
         setStore(d?.store ?? d);
       }
       if (menuRes.status === 'fulfilled' && menuRes.value.data.success) {
-        const items = (menuRes.value.data.data as any)?.menuItems ?? (menuRes.value.data.data as any)?.menu ?? [];
+        const items = resolveMenuItems(menuRes.value.data.data as any);
         setMenu(items);
-        const cats = Array.from(new Set(items.map((i: MenuItem) => i.category).filter(Boolean))) as string[];
+        const cats = Array.from(new Set(items.map((i) => i.category).filter(Boolean))) as string[];
         setCategories(cats);
       }
     } finally {
@@ -148,7 +148,7 @@ export default function StoreMenuScreen({ route, navigation }: StoreMenuScreenPr
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <StatusBar style="light" />
+      <ScreenBars style="light" backgroundColor={String(c.primary)} />
       <RNAnimated.FlatList
         data={filteredMenu.filter((i) => i.is_available)}
         keyExtractor={(i) => i._id}

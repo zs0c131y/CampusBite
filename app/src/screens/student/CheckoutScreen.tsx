@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Linking, Pressable, TextInput as RNTextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, useTheme, Surface, Button, TextInput, ActivityIndicator, Snackbar } from 'react-native-paper';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -123,7 +123,7 @@ export default function CheckoutScreen() {
   // ── Main ─────────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <StatusBar style="light" />
+      <ScreenBars style="light" backgroundColor={String(c.primary)} />
 
       {/* ── Big gradient hero header ─────────────────────────────────────── */}
       <LinearGradient

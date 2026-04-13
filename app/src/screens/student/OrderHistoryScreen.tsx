@@ -4,7 +4,7 @@ import { Text, useTheme, Chip, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -210,7 +210,7 @@ export default function OrderHistoryScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: c.background }]}>
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.surface)} />
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface, borderBottomColor: c.outlineVariant }]}>

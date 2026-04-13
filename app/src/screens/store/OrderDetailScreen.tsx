@@ -11,6 +11,7 @@ import type { Order, OrderStatus } from '@/api/types';
 import type { OrderDetailScreenProps } from '@/navigation/types';
 import { ORDER_STATUS_LABELS, formatCurrency, formatDate } from '@/utils';
 import { spacing, radius } from '@/theme';
+import { ScreenBars } from '@/components/ScreenBars';
 
 const STATUS_ICON: Record<OrderStatus, string> = {
   placed:     'clock-outline',
@@ -64,6 +65,7 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <ScreenBars style="dark" backgroundColor={c.surface as string} />
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={c.primary} />

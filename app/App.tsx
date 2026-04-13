@@ -53,7 +53,7 @@ export default function App() {
             <AuthProvider>
               <CartProvider>
                 <RootNavigator />
-                <StatusBar style="dark" />
+                <StatusBar style="dark" backgroundColor={paperTheme.colors.background as string} />
               </CartProvider>
             </AuthProvider>
           </NavigationContainer>

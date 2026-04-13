@@ -6,6 +6,19 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+// Convenience types for nested response shapes
+export interface StoresResponse {
+  stores: Store[];
+}
+
+export interface MenuListResponse {
+  menuItems: MenuItem[];
+}
+
+export interface MenuMutationResponse {
+  menuItem: MenuItem;
+}
+
 // ── User ─────────────────────────────────────────────────────────────────────
 
 export type UserRole = 'student' | 'faculty' | 'store_employee';

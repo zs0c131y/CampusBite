@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { spacing, radius } from '@/theme';
+import { ScreenBars } from '@/components/ScreenBars';
 
 const ROLE_ICON: Record<string, string> = {
   student:        'school',
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <ScreenBars style="light" backgroundColor={c.primary as string} />
       <Animated.ScrollView
         entering={FadeIn.duration(220)}
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}

@@ -10,7 +10,7 @@ import {
 import { Text, TextInput, Button, useTheme, Surface } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
@@ -60,7 +60,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       locations={[0, 0.4, 1]}
       style={styles.gradient}
     >
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.background)} />
       {/* Decorative blobs */}
       <View style={[styles.blob1, { backgroundColor: c.primary + '18' }]} />
       <View style={[styles.blob2, { backgroundColor: c.tertiary + '14' }]} />

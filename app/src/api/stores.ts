@@ -1,25 +1,37 @@
 import api from './client';
-import type { ApiResponse, Store, MenuItem } from './types';
+import type { ApiResponse, Store, MenuItem, StoresResponse, MenuListResponse, MenuMutationResponse } from './types';
 
 export const storesApi = {
-  list: () => api.get<ApiResponse<Store[]>>('/stores'),
+  list: () => api.get<ApiResponse<StoresResponse | Store[]>>('/stores'),
 
-  get: (id: string) => api.get<ApiResponse<Store>>(`/stores/${id}`),
+  get: (id: string) => api.get<ApiResponse<Store>>('/stores/' + id),
 
-  menu: (id: string) => api.get<ApiResponse<{ menuItems: MenuItem[] }>>(`/stores/${id}/menu`),
+  menu: (id: string) => api.get<ApiResponse<MenuListResponse>>('/stores/' + id + '/menu'),
 
   update: (id: string, formData: FormData) =>
-    api.put<ApiResponse<Store>>(`/stores/${id}`, formData),
+    api.put<ApiResponse<Store>>('/stores/' + id, formData),
 };
 
 export const menuApi = {
-  create: (formData: FormData) => api.post<ApiResponse<MenuItem>>('/menu', formData),
+  create: (formData: FormData) => api.post<ApiResponse<MenuMutationResponse>>('/menu', formData),
 
   update: (id: string, formData: FormData) =>
-    api.put<ApiResponse<MenuItem>>(`/menu/${id}`, formData),
+    api.put<ApiResponse<MenuMutationResponse>>('/menu/' + id, formData),
 
-  delete: (id: string) => api.delete(`/menu/${id}`),
+  delete: (id: string) => api.delete('/menu/' + id),
 
   toggleAvailability: (id: string) =>
-    api.patch<ApiResponse<MenuItem>>(`/menu/${id}/availability`),
+    api.patch<ApiResponse<MenuMutationResponse>>('/menu/' + id + '/availability'),
 };
+
+function resolveStores(raw: StoresResponse | Store[]): Store[] {
+  return Array.isArray(raw) ? raw : raw.stores;
+}
+
+function resolveMenuItems(raw: MenuListResponse | MenuItem[] | undefined): MenuItem[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return raw.menuItems ?? [];
+}
+
+export { resolveStores, resolveMenuItems };

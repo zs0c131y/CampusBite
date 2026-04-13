@@ -7,7 +7,7 @@ import Animated, { FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 import { Image } from 'expo-image';
 
 import { useCart } from '@/contexts/CartContext';
@@ -125,7 +125,7 @@ export default function CartScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.elevation.level2)} />
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8, backgroundColor: c.elevation.level2 }]}>
         <Pressable

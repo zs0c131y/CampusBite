@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { StatusBar } from 'expo-status-bar';
+import { ScreenBars } from '@/components/ScreenBars';
 
 import { ordersApi } from '@/api/orders';
 import type { Order, OrderStatus } from '@/api/types';
@@ -98,7 +98,7 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.surface)} />
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={c.primary} />

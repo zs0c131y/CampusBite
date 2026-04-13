@@ -12,6 +12,7 @@ import type { Order, OrderStatus } from '@/api/types';
 import type { StoreStackParamList } from '@/navigation/types';
 import { ORDER_STATUS_LABELS, formatCurrency, formatTime } from '@/utils';
 import { spacing, radius } from '@/theme';
+import { ScreenBars } from '@/components/ScreenBars';
 
 type Nav = NativeStackNavigationProp<StoreStackParamList, 'Orders'>;
 
@@ -245,7 +246,8 @@ export default function StoreOrdersScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
+<View style={[styles.container, { backgroundColor: c.background }]}>
+      <ScreenBars style="dark" backgroundColor={c.surface as string} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>

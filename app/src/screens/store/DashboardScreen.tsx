@@ -5,11 +5,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ordersApi } from '@/api/orders';
-import { storesApi } from '@/api/stores';
+import { storesApi, resolveStores } from '@/api/stores';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Order, Store } from '@/api/types';
 import { formatCurrency, formatTime, getGreeting, ORDER_STATUS_LABELS } from '@/utils';
 import { spacing, radius } from '@/theme';
+import { ScreenBars } from '@/components/ScreenBars';
 
 const STATUS_COLOR: Record<string, string> = {
   placed: '#C56200',
@@ -51,7 +52,8 @@ export default function DashboardScreen() {
       ]);
       if (ordersRes.data.success) setOrders(ordersRes.data.data ?? []);
       if (storesRes.data.success) {
-        const mine = (storesRes.data.data as any[]).find((s) => s.owner_id === user?._id);
+        const list = resolveStores(storesRes.data.data as any);
+        const mine = list.find((s) => s.owner_id === user?._id);
         if (mine) setStore(mine);
       }
     } finally {
@@ -75,6 +77,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <ScreenBars style="dark" backgroundColor={c.elevation.level2 as string} />
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: c.elevation.level2 }]}>
         <View style={styles.headerTop}>

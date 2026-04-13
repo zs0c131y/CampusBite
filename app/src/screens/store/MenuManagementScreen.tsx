@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, StyleSheet, Pressable, Alert, RefreshControl,
-  Modal, ScrollView, KeyboardAvoidingView, Platform, TextInput as RNTextInput,
+  Modal, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Text, useTheme, Switch, ActivityIndicator, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -9,11 +9,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 
-import { storesApi, menuApi } from '@/api/stores';
+import { storesApi, menuApi, resolveStores, resolveMenuItems } from '@/api/stores';
+import { SERVER_URL } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { MenuItem } from '@/api/types';
 import { formatCurrency } from '@/utils';
+import { ScreenBars } from '@/components/ScreenBars';
 import { spacing, radius } from '@/theme';
+
+function resolveImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${SERVER_URL}${url}`;
+}
 
 // ── Add/Edit item form modal ─────────────────────────────────────────────────
 
@@ -27,27 +35,37 @@ interface ItemFormState {
 
 const EMPTY_FORM: ItemFormState = { name: '', description: '', price: '', category: '', image_url: '' };
 
-function AddItemModal({
+function ItemFormModal({
   visible,
-  storeId,
+  initial,
+  title,
+  actionLabel,
+  onSave,
+  saving,
   onClose,
-  onCreated,
 }: {
   visible: boolean;
-  storeId: string;
+  initial: ItemFormState;
+  title: string;
+  actionLabel: string;
+  onSave: (form: ItemFormState) => Promise<void>;
+  saving: boolean;
   onClose: () => void;
-  onCreated: (item: MenuItem) => void;
 }) {
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ItemFormState>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const priceRef = useRef<any>(null);
-  const categoryRef = useRef<any>(null);
-  const descRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (visible) setForm(initial);
+  }, [visible, initial]);
 
   const set = (key: keyof ItemFormState) => (val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
+
+  const priceRef = useRef<any>(null);
+  const categoryRef = useRef<any>(null);
+  const descRef = useRef<any>(null);
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -59,30 +77,7 @@ function AddItemModal({
       Alert.alert('Invalid price', 'Enter a valid price greater than 0.');
       return;
     }
-
-    setSaving(true);
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const formData = new FormData();
-      formData.append('store_id', storeId);
-      formData.append('name', form.name.trim());
-      formData.append('price', priceNum.toString());
-      if (form.description.trim()) formData.append('description', form.description.trim());
-      if (form.category.trim()) formData.append('category', form.category.trim());
-      if (form.image_url.trim()) formData.append('image_url', form.image_url.trim());
-
-      const { data } = await menuApi.create(formData);
-      if (data.success && data.data) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onCreated(data.data);
-        setForm(EMPTY_FORM);
-        onClose();
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e.response?.data?.message ?? 'Failed to create item.');
-    } finally {
-      setSaving(false);
-    }
+    await onSave(form);
   };
 
   const field = (
@@ -121,12 +116,11 @@ function AddItemModal({
         style={{ flex: 1, backgroundColor: c.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Modal header */}
         <View style={[styles.modalHeader, { backgroundColor: c.elevation.level2, borderBottomColor: c.outlineVariant }]}>
           <Pressable onPress={onClose} hitSlop={8} style={styles.modalClose}>
             <MaterialCommunityIcons name="close" size={22} color={c.onSurfaceVariant} />
           </Pressable>
-          <Text style={[styles.modalTitle, { color: c.onSurface }]}>New Menu Item</Text>
+          <Text style={[styles.modalTitle, { color: c.onSurface }]}>{title}</Text>
           <Pressable
             onPress={handleSubmit}
             disabled={saving}
@@ -137,7 +131,7 @@ function AddItemModal({
           >
             {saving
               ? <ActivityIndicator size={16} color={c.onPrimary} />
-              : <Text style={[styles.modalSaveBtnText, { color: c.onPrimary }]}>Add</Text>
+              : <Text style={[styles.modalSaveBtnText, { color: c.onPrimary }]}>{actionLabel}</Text>
             }
           </Pressable>
         </View>
@@ -146,12 +140,10 @@ function AddItemModal({
           contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 32 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Required fields */}
           <Text style={[styles.formSection, { color: c.onSurfaceVariant }]}>REQUIRED</Text>
           {field('Item name *', 'name', { placeholder: 'e.g. Masala Chai', nextRef: priceRef, icon: 'food-outline' })}
           {field('Price (₹) *', 'price', { keyboardType: 'decimal-pad', placeholder: '0.00', ref: priceRef, nextRef: categoryRef, icon: 'currency-inr' })}
 
-          {/* Optional fields */}
           <Text style={[styles.formSection, { color: c.onSurfaceVariant, marginTop: spacing.md }]}>OPTIONAL</Text>
           {field('Category', 'category', { placeholder: 'e.g. Beverages', ref: categoryRef, nextRef: descRef, icon: 'tag-outline' })}
           {field('Description', 'description', { placeholder: 'Short description…', multiline: true, ref: descRef, icon: 'text-long' })}
@@ -160,7 +152,7 @@ function AddItemModal({
           {form.image_url.trim().length > 0 && (
             <View style={[styles.imagePreviewWrap, { backgroundColor: c.surfaceVariant }]}>
               <Image
-                source={{ uri: form.image_url.trim() }}
+                source={{ uri: resolveImageUrl(form.image_url.trim()) ?? form.image_url.trim() }}
                 style={styles.imagePreview}
                 contentFit="cover"
               />
@@ -178,12 +170,16 @@ function MenuItemRow({
   item,
   onToggle,
   onDelete,
+  onEdit,
 }: {
   item: MenuItem;
   onToggle: () => void;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
   const { colors: c } = useTheme();
+  const [imgError, setImgError] = useState(false);
+  const imageUri = resolveImageUrl(item.image_url);
 
   return (
     <View
@@ -195,15 +191,20 @@ function MenuItemRow({
         },
       ]}
     >
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.itemImage} contentFit="cover" />
+      {imageUri && !imgError ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.itemImage}
+          contentFit="cover"
+          onError={() => setImgError(true)}
+        />
       ) : (
         <View style={[styles.itemImagePlaceholder, { backgroundColor: c.primaryContainer }]}>
           <MaterialCommunityIcons name="food-outline" size={24} color={c.onPrimaryContainer} />
         </View>
       )}
 
-      <View style={{ flex: 1, marginHorizontal: spacing.md }}>
+      <Pressable style={{ flex: 1, marginHorizontal: spacing.md }} onPress={onEdit}>
         <Text style={[styles.itemName, { color: item.is_available ? c.onSurface : c.onSurfaceVariant }]} numberOfLines={1}>
           {item.name}
         </Text>
@@ -215,7 +216,7 @@ function MenuItemRow({
         <Text style={[styles.itemPrice, { color: item.is_available ? c.primary : c.onSurfaceVariant }]}>
           {formatCurrency(item.price)}
         </Text>
-      </View>
+      </Pressable>
 
       <View style={styles.itemActions}>
         <Switch
@@ -223,9 +224,16 @@ function MenuItemRow({
           onValueChange={onToggle}
         />
         <Pressable
+          onPress={onEdit}
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <MaterialCommunityIcons name="pencil-outline" size={18} color={c.onSurfaceVariant} />
+        </Pressable>
+        <Pressable
           onPress={onDelete}
           hitSlop={8}
-          style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.6 : 1 }]}
         >
           <MaterialCommunityIcons name="delete-outline" size={20} color={c.error} />
         </Pressable>
@@ -236,6 +244,16 @@ function MenuItemRow({
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
+function formFromItem(item: MenuItem): ItemFormState {
+  return {
+    name: item.name,
+    description: item.description ?? '',
+    price: item.price.toString(),
+    category: item.category ?? '',
+    image_url: item.image_url ?? '',
+  };
+}
+
 export default function MenuManagementScreen() {
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -245,18 +263,16 @@ export default function MenuManagementScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Step 1: Resolve own store once
+  // Step 1: Resolve own store
   useEffect(() => {
     storesApi.list()
       .then(({ data }) => {
-        console.log('[Menu] stores response:', JSON.stringify(data).slice(0, 300));
-        console.log('[Menu] user._id:', user?._id);
         if (data.success) {
-          const stores = data.data as any[];
-          console.log('[Menu] store owner_ids:', stores.map((s) => s.owner_id));
-          const myStore = stores.find((s) => s.owner_id === user?._id);
-          console.log('[Menu] myStore:', myStore?._id ?? 'NOT FOUND');
+          const list = resolveStores(data.data as any);
+          const myStore = list.find((s) => s.owner_id === user?._id);
           if (myStore) {
             setStoreId(myStore._id);
           } else {
@@ -266,7 +282,7 @@ export default function MenuManagementScreen() {
           setLoading(false);
         }
       })
-      .catch((e) => { console.log('[Menu] stores list error:', e.message); setLoading(false); });
+      .catch(() => { setLoading(false); });
   }, [user?._id]);
 
   // Step 2: Fetch menu when storeId is known
@@ -274,8 +290,9 @@ export default function MenuManagementScreen() {
     if (!storeId) return;
     try {
       const { data } = await storesApi.menu(storeId);
-      console.log('[Menu] menu response:', JSON.stringify(data).slice(0, 300));
-      if (data.success) setMenu(data.data?.menuItems ?? []);
+      if (data.success) {
+        setMenu(resolveMenuItems(data.data as any));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -284,21 +301,82 @@ export default function MenuManagementScreen() {
 
   useEffect(() => { fetchMenu(); }, [fetchMenu]);
 
+  // ── Add item ────────────────────────────────────────────────────────────────
+  const handleAdd = async (form: ItemFormState) => {
+    const priceNum = parseFloat(form.price);
+    setSaving(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const formData = new FormData();
+      formData.append('name', form.name.trim());
+      formData.append('price', priceNum.toString());
+      if (form.description.trim()) formData.append('description', form.description.trim());
+      if (form.category.trim()) formData.append('category', form.category.trim());
+      if (form.image_url.trim()) formData.append('image_url', form.image_url.trim());
+
+      const { data } = await menuApi.create(formData);
+      if (data.success && data.data) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const newItem = (data.data as any).menuItem ?? data.data;
+        setMenu((prev) => [newItem, ...prev]);
+        setShowAddModal(false);
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.message ?? 'Failed to create item.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Edit item ──────────────────────────────────────────────────────────────
+  const handleEdit = async (form: ItemFormState) => {
+    if (!editingItem) return;
+    const priceNum = parseFloat(form.price);
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', form.name.trim());
+      formData.append('price', priceNum.toString());
+      if (form.description.trim()) formData.append('description', form.description.trim());
+      else formData.append('description', '');
+      if (form.category.trim()) formData.append('category', form.category.trim());
+      else formData.append('category', '');
+      if (form.image_url.trim()) formData.append('image_url', form.image_url.trim());
+
+      const { data } = await menuApi.update(editingItem._id, formData);
+      if (data.success && data.data) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const updated = (data.data as any).menuItem ?? data.data;
+        setMenu((prev) => prev.map((i) => i._id === editingItem._id ? { ...i, ...updated } : i));
+        setEditingItem(null);
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.message ?? 'Failed to update item.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Toggle availability ────────────────────────────────────────────────────
   const handleToggle = async (item: MenuItem) => {
     await Haptics.selectionAsync();
     setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, is_available: !i.is_available } : i));
     try {
-      await menuApi.toggleAvailability(item._id);
+      const { data } = await menuApi.toggleAvailability(item._id);
+      if (data.success && data.data) {
+        const updated = (data.data as any).menuItem ?? data.data;
+        setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, ...updated } : i));
+      }
     } catch {
-      // Revert on failure
       setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, is_available: item.is_available } : i));
       Alert.alert('Error', 'Failed to update availability.');
     }
   };
 
+  // ── Delete item ─────────────────────────────────────────────────────────────
   const handleDelete = (item: MenuItem) => {
     Alert.alert(
-      `Delete "${item.name}"?`,
+      'Delete "' + item.name + '"?',
       'This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -322,7 +400,7 @@ export default function MenuManagementScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      <ScreenBars style="dark" backgroundColor={c.elevation.level2 as string} />
       <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: c.elevation.level2 }]}>
         <View>
           <Text style={[styles.headerTitle, { color: c.onSurface }]}>Menu</Text>
@@ -381,16 +459,32 @@ export default function MenuManagementScreen() {
             item={item}
             onToggle={() => handleToggle(item)}
             onDelete={() => handleDelete(item)}
+            onEdit={() => setEditingItem(item)}
           />
         )}
       />
 
-      {storeId && (
-        <AddItemModal
-          visible={showAddModal}
-          storeId={storeId}
-          onClose={() => setShowAddModal(false)}
-          onCreated={(newItem) => setMenu((prev) => [newItem, ...prev])}
+      {/* Add modal */}
+      <ItemFormModal
+        visible={showAddModal}
+        initial={EMPTY_FORM}
+        title="New Menu Item"
+        actionLabel="Add"
+        onSave={handleAdd}
+        saving={saving}
+        onClose={() => setShowAddModal(false)}
+      />
+
+      {/* Edit modal */}
+      {editingItem && (
+        <ItemFormModal
+          visible={!!editingItem}
+          initial={formFromItem(editingItem)}
+          title="Edit Item"
+          actionLabel="Save"
+          onSave={handleEdit}
+          saving={saving}
+          onClose={() => setEditingItem(null)}
         />
       )}
     </View>
@@ -439,8 +533,8 @@ const styles = StyleSheet.create({
   },
   categoryText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
   itemPrice: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 4 },
-  itemActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  deleteBtn: { padding: 4 },
+  itemActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  iconBtn: { padding: 4 },
 
   // Empty
   center: { paddingTop: 80, alignItems: 'center' },

@@ -4,15 +4,15 @@ import { Text, useTheme, Surface, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { storesApi } from '@/api/stores';
+import { storesApi, resolveStores } from '@/api/stores';
 import { ordersApi } from '@/api/orders';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Store, Order } from '@/api/types';
+import { ScreenBars } from '@/components/ScreenBars';
 import type { StudentStackParamList } from '@/navigation/types';
 import { getGreeting } from '@/utils';
 import StoreCard from '@/components/StoreCard';
@@ -41,8 +41,7 @@ export default function HomeScreen() {
         ordersApi.list({ status: 'placed,accepted,processing,ready' }),
       ]);
       if (storesRes.status === 'fulfilled' && storesRes.value.data.success) {
-        const raw = storesRes.value.data.data;
-        setStores(Array.isArray(raw) ? raw : (raw as any)?.stores ?? []);
+        setStores(resolveStores(storesRes.value.data.data as any));
       }
       if (ordersRes.status === 'fulfilled' && ordersRes.value.data.success) {
         setActiveOrders(ordersRes.value.data.data ?? []);
@@ -70,7 +69,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      <StatusBar style="dark" />
+      <ScreenBars style="dark" backgroundColor={String(c.primaryContainer)} />
       {/* Header with gradient */}
       <LinearGradient
         colors={[c.primaryContainer + 'CC', c.background]}
