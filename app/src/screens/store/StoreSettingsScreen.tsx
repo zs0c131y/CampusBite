@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
-import { Text, useTheme, TextInput, ActivityIndicator, Surface } from 'react-native-paper';
+import { Text, useTheme, TextInput, ActivityIndicator, Surface, Switch, Snackbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,9 +9,10 @@ import * as Haptics from 'expo-haptics';
 import { storesApi, resolveStores } from '@/api/stores';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Store } from '@/api/types';
-import { formatOperatingHours } from '@/utils';
+import { formatOperatingHours, withOpacity } from '@/utils';
 import { spacing, radius } from '@/theme';
 import { ScreenBars } from '@/components/ScreenBars';
+import FriendlyError from '@/components/FriendlyError';
 
 export default function StoreSettingsScreen() {
   const { colors: c } = useTheme();
@@ -20,6 +21,11 @@ export default function StoreSettingsScreen() {
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
+  const [snackError, setSnackError] = useState(false);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -35,6 +41,7 @@ export default function StoreSettingsScreen() {
           const my = list.find((s) => s.owner_id === user?._id);
           if (my) {
             setStore(my);
+            setIsActive(my.is_active ?? false);
             setName(my.name ?? '');
             setDescription(my.description ?? '');
             setUpiId(my.upi_id ?? '');
@@ -45,8 +52,30 @@ export default function StoreSettingsScreen() {
           }
         }
       })
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [user?._id]);
+
+  const showSnack = (msg: string, isError: boolean) => {
+    setSnackMsg(msg);
+    setSnackError(isError);
+    setSnackVisible(true);
+  };
+
+  const handleToggleActive = async (value: boolean) => {
+    if (!store) return;
+    setIsActive(value);
+    try {
+      const formData = new FormData();
+      formData.append('is_active', String(value));
+      await storesApi.update(store._id, formData);
+      setStore((prev) => prev ? { ...prev, is_active: value } : prev);
+      showSnack(value ? 'Store is now open' : 'Store is now closed', false);
+    } catch {
+      setIsActive(!value);
+      showSnack('Failed to update store status', true);
+    }
+  };
 
   const handleSave = async () => {
     if (!store) return;
@@ -91,6 +120,44 @@ export default function StoreSettingsScreen() {
     );
   }
 
+  if (fetchError) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: c.background }]}>
+        <ScreenBars style="light" backgroundColor={c.primary as string} />
+        <FriendlyError
+          emoji="😕"
+          title="Could not load store"
+          subtitle="Something went wrong while fetching your store settings."
+          actionLabel="Retry"
+          onAction={() => {
+            setFetchError(false);
+            setLoading(true);
+            storesApi.list()
+              .then(({ data }) => {
+                if (data.success) {
+                  const list = resolveStores(data.data as any);
+                  const my = list.find((s) => s.owner_id === user?._id);
+                  if (my) {
+                    setStore(my);
+                    setIsActive(my.is_active ?? false);
+                    setName(my.name ?? '');
+                    setDescription(my.description ?? '');
+                    setUpiId(my.upi_id ?? '');
+                    if (my.operating_hours && typeof my.operating_hours === 'object') {
+                      setOpenTime(my.operating_hours.open ?? my.operating_hours.opening_time ?? '');
+                      setCloseTime(my.operating_hours.close ?? my.operating_hours.closing_time ?? '');
+                    }
+                  }
+                }
+              })
+              .catch(() => setFetchError(true))
+              .finally(() => setLoading(false));
+          }}
+        />
+      </View>
+    );
+  }
+
   const hoursDisplay = store?.operating_hours ? formatOperatingHours(store.operating_hours) : null;
 
   return (
@@ -103,7 +170,7 @@ export default function StoreSettingsScreen() {
       >
         {/* ── Hero header ── */}
         <LinearGradient
-          colors={[c.primary, '#7A3C00']}
+          colors={[c.primary, c.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.hero, { paddingTop: insets.top + 24 }]}
@@ -114,17 +181,42 @@ export default function StoreSettingsScreen() {
             </View>
           </View>
           <Text style={styles.heroName}>{store?.name ?? 'Your Store'}</Text>
-          <View style={[styles.heroBadge, { backgroundColor: store?.is_active ? 'rgba(46,125,50,0.85)' : 'rgba(255,255,255,0.2)' }]}>
-            <View style={[styles.heroDot, { backgroundColor: store?.is_active ? '#A5D6A7' : 'rgba(255,255,255,0.6)' }]} />
-            <Text style={styles.heroBadgeText}>{store?.is_active ? 'Open' : 'Closed'}</Text>
+          <View style={[styles.heroBadge, { backgroundColor: isActive ? 'rgba(46,125,50,0.85)' : 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.heroDot, { backgroundColor: isActive ? '#A5D6A7' : 'rgba(255,255,255,0.6)' }]} />
+            <Text style={styles.heroBadgeText}>{isActive ? 'Open' : 'Closed'}</Text>
           </View>
           {hoursDisplay && (
             <Text style={styles.heroHours}>{hoursDisplay}</Text>
           )}
         </LinearGradient>
 
-        {/* ── Owner info card ── */}
+        {/* ── Store status toggle ── */}
         <View style={{ paddingHorizontal: spacing.base, marginTop: -spacing.lg }}>
+          <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={2}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="toggle-switch-outline" size={18} color={c.primary} />
+              <Text style={[styles.cardTitle, { color: c.onSurface }]}>Store Status</Text>
+            </View>
+            <View style={styles.toggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleLabel, { color: c.onSurface }]}>
+                  {isActive ? 'Accepting orders' : 'Not accepting orders'}
+                </Text>
+                <Text style={[styles.toggleHint, { color: c.onSurfaceVariant }]}>
+                  Toggle to open or close your store
+                </Text>
+              </View>
+              <Switch
+                value={isActive}
+                onValueChange={handleToggleActive}
+                color={c.primary}
+              />
+            </View>
+          </Surface>
+        </View>
+
+        {/* ── Owner info card ── */}
+        <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.md }}>
           <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={2}>
             <View style={styles.cardHeader}>
               <MaterialCommunityIcons name="account-circle-outline" size={18} color={c.primary} />
@@ -195,7 +287,7 @@ export default function StoreSettingsScreen() {
               outlineStyle={{ borderRadius: radius.md }}
               left={<TextInput.Icon icon="bank-outline" />}
             />
-            <View style={[styles.hintRow, { backgroundColor: c.primaryContainer + '66' }]}>
+            <View style={[styles.hintRow, { backgroundColor: withOpacity(c.primaryContainer as string, 0.4) }]}>
               <MaterialCommunityIcons name="information-outline" size={14} color={c.onPrimaryContainer} />
               <Text style={[styles.hintText, { color: c.onPrimaryContainer }]}>
                 Customers will send payment to this UPI ID
@@ -272,6 +364,15 @@ export default function StoreSettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Snackbar
+        visible={snackVisible}
+        onDismiss={() => setSnackVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: snackError ? c.error : c.primary }}
+      >
+        {snackMsg}
+      </Snackbar>
     </View>
   );
 }
@@ -280,7 +381,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
 
-  // Hero gradient
   hero: {
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
@@ -312,7 +412,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // Owner section
   ownerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
@@ -328,7 +427,6 @@ const styles = StyleSheet.create({
   },
   rolePillText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
 
-  // Cards
   card: {
     borderRadius: radius.xl,
     padding: spacing.base,
@@ -339,7 +437,12 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 
-  // Inputs
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center',
+  },
+  toggleLabel: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  toggleHint: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+
   input: { marginBottom: spacing.sm },
   hoursRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   hintRow: {
@@ -348,14 +451,12 @@ const styles = StyleSheet.create({
   },
   hintText: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },
 
-  // Save button
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, height: 52, borderRadius: radius.xl,
   },
   saveBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 
-  // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, height: 48, borderRadius: radius.xl,

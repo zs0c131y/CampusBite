@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import type { OrderTrackingScreenProps } from '@/navigation/types';
 import { ORDER_STATUS_LABELS, formatTime, formatCurrency } from '@/utils';
 import { requestNotificationPermission, setupNotificationChannel, sendOrderStatusNotification } from '@/utils/notifications';
 import { spacing, radius } from '@/theme';
+import FriendlyError from '@/components/FriendlyError';
 
 const STATUS_ICON: Record<OrderStatus, string> = {
   placed:     'clock-outline',
@@ -31,6 +32,8 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
   const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const prevStatus = useRef<OrderStatus | null>(null);
   const c = theme.colors;
 
@@ -39,17 +42,16 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const fetchOrder = useCallback(async () => {
+    setError('');
     try {
       const { data } = await ordersApi.get(orderId);
       if (data.success) {
         const newOrder = data.data;
-        // Haptic on status change
         if (prevStatus.current && prevStatus.current !== newOrder.order_status) {
           const newStatus = newOrder.order_status as OrderStatus;
           sendOrderStatusNotification(newStatus, newOrder.order_number);
           if (newStatus === 'ready') {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            // Pulse for ~5 seconds (4 cycles × 1.2s) then stop
             pulse.value = withRepeat(withSequence(withTiming(1.08, { duration: 600 }), withTiming(1, { duration: 600 })), 4, true);
           } else if (newStatus === 'picked_up' || newStatus === 'cancelled') {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -60,8 +62,11 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
         prevStatus.current = newOrder.order_status;
         setOrder(newOrder);
       }
+    } catch (e: any) {
+      if (!order) setError(e.response?.data?.message ?? e.message ?? 'Could not load order details.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [orderId]);
 
@@ -82,10 +87,40 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
     return () => clearInterval(interval);
   }, [fetchOrder]);
 
-  if (loading || !order) {
+  if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: c.background, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
+
+  if (error && !order) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <ScreenBars style="dark" backgroundColor={String(c.background)} />
+        <FriendlyError
+          emoji="📡"
+          title="Can't reach your order"
+          subtitle={error}
+          actionLabel="Try again"
+          onAction={() => { setLoading(true); fetchOrder(); }}
+        />
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <ScreenBars style="dark" backgroundColor={String(c.background)} />
+        <FriendlyError
+          emoji="🤔"
+          title="Order not found"
+          subtitle="Something went wrong loading this order."
+          actionLabel="Try again"
+          onAction={() => { setLoading(true); fetchOrder(); }}
+        />
       </View>
     );
   }
@@ -112,6 +147,14 @@ export default function OrderTrackingScreen({ route, navigation }: OrderTracking
       <Animated.ScrollView
         entering={FadeIn.duration(220)}
         contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchOrder(); }}
+            colors={[c.primary]}
+            tintColor={c.primary}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         {/* Status hero */}

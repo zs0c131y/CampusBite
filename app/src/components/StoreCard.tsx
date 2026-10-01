@@ -3,18 +3,12 @@ import { StyleSheet, Pressable, View } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import type { Store } from '@/api/types';
-import { SERVER_URL } from '@/api/client';
-import { formatOperatingHours } from '@/utils';
+import { resolveImageUrl, withOpacity, formatOperatingHours } from '@/utils';
 import { spacing, radius } from '@/theme';
-
-function resolveImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${SERVER_URL}${url}`;
-}
 
 interface Props {
   store: Store;
@@ -40,10 +34,9 @@ export default function StoreCard({ store, onPress }: Props) {
         onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 10 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 10 }); }}
-        android_ripple={{ color: c.primary + '20' }}
+        android_ripple={{ color: withOpacity(c.primary, 0.12) }}
       >
         <Surface style={[styles.card, { backgroundColor: c.surface }]} elevation={1}>
-          {/* Image */}
           <View style={styles.imageContainer}>
             {imageUri && !imgError ? (
               <Image
@@ -57,7 +50,7 @@ export default function StoreCard({ store, onPress }: Props) {
                 colors={[c.primary, c.primaryContainer]}
                 style={[styles.image, styles.placeholder]}
               >
-                <Text style={{ fontSize: 40 }}>🍽️</Text>
+                <MaterialCommunityIcons name="store" size={40} color={c.onPrimaryContainer} />
               </LinearGradient>
             )}
             <LinearGradient
@@ -66,7 +59,6 @@ export default function StoreCard({ store, onPress }: Props) {
             />
           </View>
 
-          {/* Content */}
           <View style={styles.content}>
             <View style={styles.row}>
               <Text style={[styles.storeName, { color: c.onSurface, flex: 1 }]} numberOfLines={1}>
@@ -88,14 +80,14 @@ export default function StoreCard({ store, onPress }: Props) {
             <View style={styles.footer}>
               {hours ? (
                 <View style={styles.hoursBadge}>
-                  <Text style={{ fontSize: 12 }}>🕐</Text>
+                  <MaterialCommunityIcons name="clock-outline" size={13} color={c.onSurfaceVariant} />
                   <Text style={[styles.hoursText, { color: c.onSurfaceVariant }]}>
                     {hours}
                   </Text>
                 </View>
               ) : null}
               <View style={[styles.chevron, { backgroundColor: c.primaryContainer }]}>
-                <Text style={{ color: c.primary, fontWeight: '700', fontSize: 16 }}>→</Text>
+                <MaterialCommunityIcons name="arrow-right" size={16} color={c.primary} />
               </View>
             </View>
           </View>
@@ -119,6 +111,6 @@ const styles = StyleSheet.create({
   activeBadge: { borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
   hoursBadge: { flexDirection: 'row', alignItems: 'center' },
-  hoursText: { fontSize: 12, fontFamily: 'Inter_400Regular', marginLeft: spacing.xs },
+  hoursText: { fontSize: 12, fontFamily: 'Inter_400Regular', marginLeft: 4 },
   chevron: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 });

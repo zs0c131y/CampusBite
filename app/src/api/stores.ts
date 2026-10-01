@@ -2,9 +2,9 @@ import api from './client';
 import type { ApiResponse, Store, MenuItem, StoresResponse, MenuListResponse, MenuMutationResponse } from './types';
 
 export const storesApi = {
-  list: () => api.get<ApiResponse<StoresResponse | Store[]>>('/stores'),
+  list: () => api.get<ApiResponse<StoresResponse>>('/stores'),
 
-  get: (id: string) => api.get<ApiResponse<Store>>('/stores/' + id),
+  get: (id: string) => api.get<ApiResponse<{ store: Store } | Store>>('/stores/' + id),
 
   menu: (id: string) => api.get<ApiResponse<MenuListResponse>>('/stores/' + id + '/menu'),
 
@@ -24,14 +24,17 @@ export const menuApi = {
     api.patch<ApiResponse<MenuMutationResponse>>('/menu/' + id + '/availability'),
 };
 
-function resolveStores(raw: StoresResponse | Store[]): Store[] {
-  return Array.isArray(raw) ? raw : raw.stores;
+function resolveStores(raw: StoresResponse | Store[] | Record<string, Store[]>): Store[] {
+  if (Array.isArray(raw)) return raw;
+  if ('stores' in raw) return raw.stores;
+  return [];
 }
 
 function resolveMenuItems(raw: MenuListResponse | MenuItem[] | undefined): MenuItem[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
-  return raw.menuItems ?? [];
+  if ('menuItems' in raw) return raw.menuItems ?? [];
+  return [];
 }
 
 export { resolveStores, resolveMenuItems };

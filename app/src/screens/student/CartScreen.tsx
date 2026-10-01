@@ -11,19 +11,12 @@ import { ScreenBars } from '@/components/ScreenBars';
 import { Image } from 'expo-image';
 
 import { useCart } from '@/contexts/CartContext';
-import { SERVER_URL } from '@/api/client';
 import type { CartItem } from '@/api/types';
 import type { StudentStackParamList } from '@/navigation/types';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, resolveImageUrl } from '@/utils';
 import { spacing, radius } from '@/theme';
 
 type Nav = NativeStackNavigationProp<StudentStackParamList, 'Cart'>;
-
-function resolveImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${SERVER_URL}${url}`;
-}
 
 function CartItemRow({ item }: { item: CartItem }) {
   const theme = useTheme();

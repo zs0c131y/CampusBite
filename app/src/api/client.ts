@@ -1,10 +1,17 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { clearAuthData, getAccessToken, getRefreshToken, saveTokens } from '@/storage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:5000/api';
+const DEV_DEFAULT = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+const rawUrl = process.env.EXPO_PUBLIC_API_URL ?? DEV_DEFAULT;
 
-// Server root (strips any path after the host) — used to resolve relative upload URLs like /uploads/...
-// Uses regex instead of new URL() to avoid Hermes/RN polyfill issues at module init time.
+function enforceHttps(url: string): string {
+  if (__DEV__) return url;
+  return url.replace(/^http:/, 'https:');
+}
+
+const BASE_URL = enforceHttps(rawUrl);
+
 export const SERVER_URL = BASE_URL.match(/^https?:\/\/[^/]*/)?.[0] ?? '';
 
 // Callback invoked when token refresh fails so AuthContext can sign the user out

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
-import { Text, useTheme, Surface, Button, Dialog, Portal } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Pressable, TextInput } from 'react-native';
+import { Text, useTheme, Surface, Button, Dialog, Portal, Snackbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,8 +8,10 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { usersApi } from '@/api/users';
 import { spacing, radius } from '@/theme';
 import { ScreenBars } from '@/components/ScreenBars';
+import { withOpacity } from '@/utils';
 
 const ROLE_ICON: Record<string, string> = {
   student:        'school',
@@ -52,11 +54,28 @@ function InfoRow({ icon, label, value, valueColor }: {
 export default function ProfileScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [editPhone, setEditPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [snackMsg, setSnackMsg] = useState<string | null>(null);
   const c = theme.colors;
+
+  const handleSavePhone = async () => {
+    setSaving(true);
+    try {
+      await usersApi.update({ phone_number: editPhone });
+      await refreshUser();
+      setEditingPhone(false);
+      setSnackMsg('Phone number updated');
+    } catch {
+      setSnackMsg('Failed to update phone number');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     setShowLogoutDialog(false);
@@ -84,14 +103,14 @@ export default function ProfileScreen() {
       >
         {/* ── Gradient hero ── */}
         <LinearGradient
-          colors={[c.primary, '#7A3C00']}
+          colors={[c.primary, c.secondary as string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.hero, { paddingTop: insets.top + 24 }]}
         >
           {/* Avatar */}
-          <View style={[styles.avatarRing, { borderColor: 'rgba(255,255,255,0.35)' }]}>
-            <View style={[styles.avatarCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+          <View style={[styles.avatarRing, { borderColor: withOpacity('#FFFFFF', 0.35) }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: withOpacity('#FFFFFF', 0.2) }]}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           </View>
@@ -99,19 +118,10 @@ export default function ProfileScreen() {
           <Text style={styles.heroName}>{user.name}</Text>
 
           {/* Role badge */}
-          <View style={[styles.roleBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+          <View style={[styles.roleBadge, { backgroundColor: withOpacity('#FFFFFF', 0.2) }]}>
             <MaterialCommunityIcons name={ROLE_ICON[user.role] as any} size={13} color="#fff" />
             <Text style={styles.roleBadgeText}>{ROLE_LABELS[user.role]}</Text>
           </View>
-
-          {/* Edit button */}
-          <Pressable
-            onPress={() => setShowEditDialog(true)}
-            style={({ pressed }) => [styles.editBtn, { backgroundColor: 'rgba(255,255,255,0.15)', opacity: pressed ? 0.7 : 1 }]}
-          >
-            <MaterialCommunityIcons name="pencil-outline" size={14} color="#fff" />
-            <Text style={styles.editBtnText}>Edit Profile</Text>
-          </Pressable>
         </LinearGradient>
 
         {/* ── Trust tier (non-store) ── */}
@@ -155,6 +165,63 @@ export default function ProfileScreen() {
               value={user.is_email_verified ? 'Verified' : 'Not verified'}
               valueColor={user.is_email_verified ? c.primary : c.error}
             />
+
+            {/* ── Phone row (editable) ── */}
+            <View style={styles.infoRow}>
+              <View style={[styles.infoIconWrap, { backgroundColor: c.primaryContainer }]}>
+                <MaterialCommunityIcons name="phone-outline" size={18} color={c.onPrimaryContainer} />
+              </View>
+              <View style={styles.infoText}>
+                <Text style={[styles.infoLabel, { color: c.onSurfaceVariant }]}>Phone</Text>
+                {editingPhone ? (
+                  <View style={styles.phoneEditRow}>
+                    <TextInput
+                      value={editPhone}
+                      onChangeText={setEditPhone}
+                      style={[styles.phoneInput, { color: c.onSurface, borderColor: c.outline }]}
+                      keyboardType="phone-pad"
+                      autoFocus
+                    />
+                    <Pressable
+                      onPress={handleSavePhone}
+                      disabled={saving}
+                      style={({ pressed }) => [
+                        styles.phoneActionBtn,
+                        { backgroundColor: c.primary, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={saving ? 'loading' : 'check'}
+                        size={16}
+                        color="#fff"
+                      />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setEditingPhone(false)}
+                      style={({ pressed }) => [
+                        styles.phoneActionBtn,
+                        { backgroundColor: c.surfaceVariant, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <MaterialCommunityIcons name="close" size={16} color={c.onSurface as string} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.phoneEditRow}>
+                    <Text style={[styles.infoValue, { color: c.onSurface }]}>
+                      {user.phone_number || 'Not set'}
+                    </Text>
+                    <Pressable
+                      onPress={() => { setEditPhone(user.phone_number ?? ''); setEditingPhone(true); }}
+                      style={({ pressed }) => [styles.pencilBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    >
+                      <MaterialCommunityIcons name="pencil-outline" size={14} color={c.primary as string} />
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            </View>
+
             <InfoRow
               icon={ROLE_ICON[user.role] as string}
               label="Role"
@@ -175,35 +242,6 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </Animated.ScrollView>
-
-      {/* ── Edit info dialog ── */}
-      <Portal>
-        <Dialog
-          visible={showEditDialog}
-          onDismiss={() => setShowEditDialog(false)}
-          style={{ borderRadius: radius.xl, backgroundColor: c.surface }}
-        >
-          <Dialog.Icon icon="monitor-account" size={40} />
-          <Dialog.Title style={{ textAlign: 'center', fontFamily: 'Inter_600SemiBold', color: c.onSurface }}>
-            Edit on Web
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text style={{ color: c.onSurfaceVariant, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }}>
-              Profile details can only be edited from the CampusBite web app. Visit the website and sign in to make changes.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions style={{ justifyContent: 'center' }}>
-            <Button
-              mode="contained"
-              onPress={() => setShowEditDialog(false)}
-              style={{ borderRadius: radius.lg, minWidth: 100 }}
-              labelStyle={{ fontFamily: 'Inter_600SemiBold' }}
-            >
-              Got it
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
 
       {/* ── Sign-out dialog ── */}
       <Portal>
@@ -242,6 +280,14 @@ export default function ProfileScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Snackbar
+        visible={snackMsg !== null}
+        onDismiss={() => setSnackMsg(null)}
+        duration={Snackbar.DURATION_SHORT}
+      >
+        {snackMsg}
+      </Snackbar>
     </View>
   );
 }
@@ -249,7 +295,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Hero
   hero: {
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
@@ -281,7 +326,6 @@ const styles = StyleSheet.create({
     color: '#fff', fontFamily: 'Inter_600SemiBold', fontSize: 13,
   },
 
-  // Tier
   tierRow: {
     paddingHorizontal: spacing.base,
     marginTop: -spacing.lg,
@@ -296,10 +340,8 @@ const styles = StyleSheet.create({
   tierLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   tierSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', opacity: 0.8, marginTop: 1 },
 
-  // Body
   body: { paddingHorizontal: spacing.base, gap: spacing.sm, marginTop: spacing.sm },
 
-  // Card
   card: {
     borderRadius: radius.xl,
     padding: spacing.base,
@@ -311,7 +353,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 
-  // Info rows
   infoRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.sm, gap: spacing.md,
@@ -325,18 +366,31 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 11, fontFamily: 'Inter_400Regular', marginBottom: 2 },
   infoValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
 
-  // Edit button
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md, paddingVertical: 6,
-    marginTop: spacing.md,
+  phoneEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  editBtnText: {
-    color: '#fff', fontFamily: 'Inter_500Medium', fontSize: 13,
+  phoneInput: {
+    flex: 1,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  phoneActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pencilBtn: {
+    padding: 4,
   },
 
-  // Sign out
   signOutRow: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: radius.xl,

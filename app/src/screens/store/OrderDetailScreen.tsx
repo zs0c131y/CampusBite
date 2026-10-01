@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { Text, useTheme, Surface, Button, TextInput, Dialog, Portal } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,9 +9,10 @@ import * as Haptics from 'expo-haptics';
 import { ordersApi } from '@/api/orders';
 import type { Order, OrderStatus } from '@/api/types';
 import type { OrderDetailScreenProps } from '@/navigation/types';
-import { ORDER_STATUS_LABELS, formatCurrency, formatDate } from '@/utils';
+import { ORDER_STATUS_LABELS, formatCurrency, formatDate, withOpacity } from '@/utils';
 import { spacing, radius } from '@/theme';
 import { ScreenBars } from '@/components/ScreenBars';
+import FriendlyError from '@/components/FriendlyError';
 
 const STATUS_ICON: Record<OrderStatus, string> = {
   placed:     'clock-outline',
@@ -27,17 +28,40 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [otp, setOtp] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [successDialog, setSuccessDialog] = useState(false);
   const [errorDialog, setErrorDialog] = useState<string | null>(null);
   const c = theme.colors;
 
-  useEffect(() => {
-    ordersApi.get(orderId).then(({ data }) => {
-      if (data.success) setOrder(data.data);
-    });
+  const fetchOrder = useCallback(async () => {
+    try {
+      const { data } = await ordersApi.get(orderId);
+      if (data.success) {
+        setOrder(data.data);
+        setError(null);
+      } else {
+        setError('Failed to load order.');
+      }
+    } catch {
+      setError('Something went wrong.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [orderId]);
+
+  React.useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrder();
+  }, [fetchOrder]);
 
   const handleVerifyOtp = async () => {
     if (otp.length < 6) {
@@ -60,7 +84,38 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
     }
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <ScreenBars style="dark" backgroundColor={c.surface as string} />
+        <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={20} color={c.primary} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: c.onSurface }]}>Order Detail</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <FriendlyError
+          emoji="😕"
+          title="Couldn't load order"
+          subtitle={error}
+          actionLabel="Retry"
+          onAction={fetchOrder}
+        />
+      </View>
+    );
+  }
+
   if (!order) return null;
+
   const status = order.order_status as OrderStatus;
 
   return (
@@ -78,6 +133,9 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
         entering={FadeIn.duration(220)}
         contentContainerStyle={{ padding: spacing.base, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[c.primary]} />
+        }
       >
         {/* Status hero */}
         <View>
@@ -87,7 +145,7 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
             }]}
             elevation={0}
           >
-            <View style={[styles.statusIcon, { backgroundColor: c.primary + '15' }]}>
+            <View style={[styles.statusIcon, { backgroundColor: withOpacity(c.primary, 0.08) }]}>
               <MaterialCommunityIcons
                 name={STATUS_ICON[status] as any}
                 size={32}
@@ -231,6 +289,7 @@ export default function OrderDetailScreen({ route, navigation }: OrderDetailScre
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.base, paddingBottom: spacing.md,

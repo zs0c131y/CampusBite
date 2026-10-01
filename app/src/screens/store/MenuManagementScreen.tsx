@@ -8,20 +8,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 
 import { storesApi, menuApi, resolveStores, resolveMenuItems } from '@/api/stores';
-import { SERVER_URL } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { MenuItem } from '@/api/types';
-import { formatCurrency } from '@/utils';
+import type { MenuItem, Store, MenuMutationResponse } from '@/api/types';
+import { resolveImageUrl, withOpacity, formatCurrency } from '@/utils';
 import { ScreenBars } from '@/components/ScreenBars';
+import FriendlyError from '@/components/FriendlyError';
 import { spacing, radius } from '@/theme';
-
-function resolveImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${SERVER_URL}${url}`;
-}
 
 // ── Add/Edit item form modal ─────────────────────────────────────────────────
 
@@ -67,6 +62,17 @@ function ItemFormModal({
   const categoryRef = useRef<any>(null);
   const descRef = useRef<any>(null);
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setForm((prev) => ({ ...prev, image_url: result.assets[0].uri }));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.name.trim()) {
       Alert.alert('Missing field', 'Item name is required.');
@@ -86,8 +92,8 @@ function ItemFormModal({
     opts?: {
       placeholder?: string;
       keyboardType?: 'default' | 'decimal-pad' | 'url';
-      ref?: any;
-      nextRef?: any;
+      ref?: React.RefObject<any>;
+      nextRef?: React.RefObject<any>;
       multiline?: boolean;
       icon?: string;
     },
@@ -147,12 +153,18 @@ function ItemFormModal({
           <Text style={[styles.formSection, { color: c.onSurfaceVariant, marginTop: spacing.md }]}>OPTIONAL</Text>
           {field('Category', 'category', { placeholder: 'e.g. Beverages', ref: categoryRef, nextRef: descRef, icon: 'tag-outline' })}
           {field('Description', 'description', { placeholder: 'Short description…', multiline: true, ref: descRef, icon: 'text-long' })}
-          {field('Image URL', 'image_url', { keyboardType: 'url', placeholder: 'https://…', icon: 'image-outline' })}
+
+          <Pressable onPress={pickImage} style={[styles.photoBtn, { borderColor: c.outlineVariant, backgroundColor: c.surfaceVariant }]}>
+            <MaterialCommunityIcons name="camera-outline" size={20} color={c.onSurfaceVariant} />
+            <Text style={[styles.photoBtnText, { color: c.onSurfaceVariant }]}>
+              {form.image_url.trim().length > 0 ? 'Change Photo' : 'Add Photo'}
+            </Text>
+          </Pressable>
 
           {form.image_url.trim().length > 0 && (
             <View style={[styles.imagePreviewWrap, { backgroundColor: c.surfaceVariant }]}>
               <Image
-                source={{ uri: resolveImageUrl(form.image_url.trim()) ?? form.image_url.trim() }}
+                source={{ uri: form.image_url.trim() }}
                 style={styles.imagePreview}
                 contentFit="cover"
               />
@@ -186,7 +198,7 @@ function MenuItemRow({
       style={[
         styles.itemCard,
         {
-          backgroundColor: item.is_available ? c.surface : c.surfaceVariant + '88',
+          backgroundColor: item.is_available ? c.surface : withOpacity(String(c.surfaceVariant), 0.53),
           borderColor: c.outlineVariant,
         },
       ]}
@@ -254,6 +266,8 @@ function formFromItem(item: MenuItem): ItemFormState {
   };
 }
 
+type FetchErrorState = { msg: string } | null;
+
 export default function MenuManagementScreen() {
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -262,36 +276,41 @@ export default function MenuManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<FetchErrorState>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Step 1: Resolve own store
-  useEffect(() => {
-    storesApi.list()
-      .then(({ data }) => {
-        if (data.success) {
-          const list = resolveStores(data.data as any);
-          const myStore = list.find((s) => s.owner_id === user?._id);
-          if (myStore) {
-            setStoreId(myStore._id);
-          } else {
-            setLoading(false);
-          }
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: storesRes } = await storesApi.list();
+      if (storesRes.success) {
+        const list = resolveStores(storesRes.data);
+        const myStore = list.find((s: Store) => s.owner_id === user?._id);
+        if (myStore) {
+          setStoreId(myStore._id);
         } else {
           setLoading(false);
         }
-      })
-      .catch(() => { setLoading(false); });
+      } else {
+        setFetchError({ msg: 'Failed to load store data.' });
+        setLoading(false);
+      }
+    } catch {
+      setFetchError({ msg: 'Network error. Please try again.' });
+      setLoading(false);
+    }
   }, [user?._id]);
 
-  // Step 2: Fetch menu when storeId is known
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   const fetchMenu = useCallback(async () => {
     if (!storeId) return;
     try {
       const { data } = await storesApi.menu(storeId);
       if (data.success) {
-        setMenu(resolveMenuItems(data.data as any));
+        const items = resolveMenuItems(data.data);
+        setMenu(items);
       }
     } finally {
       setLoading(false);
@@ -300,6 +319,29 @@ export default function MenuManagementScreen() {
   }, [storeId]);
 
   useEffect(() => { fetchMenu(); }, [fetchMenu]);
+
+  const retryFetch = () => {
+    setFetchError(null);
+    setLoading(true);
+    fetchData();
+  };
+
+  if (fetchError) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <ScreenBars style="dark" backgroundColor={c.elevation.level2 as string} />
+        <View style={styles.errorWrap}>
+          <FriendlyError
+            emoji="😵"
+            title="Couldn't load menu"
+            subtitle={fetchError.msg}
+            actionLabel="Try again"
+            onAction={retryFetch}
+          />
+        </View>
+      </View>
+    );
+  }
 
   // ── Add item ────────────────────────────────────────────────────────────────
   const handleAdd = async (form: ItemFormState) => {
@@ -317,12 +359,14 @@ export default function MenuManagementScreen() {
       const { data } = await menuApi.create(formData);
       if (data.success && data.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const newItem = (data.data as any).menuItem ?? data.data;
-        setMenu((prev) => [newItem, ...prev]);
+        const mutationData = data.data as MenuMutationResponse;
+        const newItem = mutationData.menuItem ?? mutationData;
+        setMenu((prev) => [{ ...(newItem as MenuItem) }, ...prev]);
         setShowAddModal(false);
       }
-    } catch (e: any) {
-      Alert.alert('Error', e.response?.data?.message ?? 'Failed to create item.');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to create item.';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }
@@ -346,12 +390,14 @@ export default function MenuManagementScreen() {
       const { data } = await menuApi.update(editingItem._id, formData);
       if (data.success && data.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const updated = (data.data as any).menuItem ?? data.data;
-        setMenu((prev) => prev.map((i) => i._id === editingItem._id ? { ...i, ...updated } : i));
+        const mutationData = data.data as MenuMutationResponse;
+        const updated = mutationData.menuItem ?? mutationData;
+        setMenu((prev) => prev.map((i) => i._id === editingItem._id ? { ...i, ...(updated as MenuItem) } : i));
         setEditingItem(null);
       }
-    } catch (e: any) {
-      Alert.alert('Error', e.response?.data?.message ?? 'Failed to update item.');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to update item.';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }
@@ -364,8 +410,9 @@ export default function MenuManagementScreen() {
     try {
       const { data } = await menuApi.toggleAvailability(item._id);
       if (data.success && data.data) {
-        const updated = (data.data as any).menuItem ?? data.data;
-        setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, ...updated } : i));
+        const mutationData = data.data as MenuMutationResponse;
+        const updated = mutationData.menuItem ?? mutationData;
+        setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, ...(updated as MenuItem) } : i));
       }
     } catch {
       setMenu((prev) => prev.map((i) => i._id === item._id ? { ...i, is_available: item.is_available } : i));
@@ -511,6 +558,9 @@ const styles = StyleSheet.create({
   },
   addBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 
+  // Error
+  errorWrap: { flex: 1, justifyContent: 'center' },
+
   // Item card
   itemCard: {
     flexDirection: 'row',
@@ -570,6 +620,17 @@ const styles = StyleSheet.create({
   modalSaveBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   formSection: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, marginBottom: spacing.sm },
   modalInput: { marginBottom: spacing.sm },
+  photoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.sm,
+  },
+  photoBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
   imagePreviewWrap: { borderRadius: radius.md, overflow: 'hidden', height: 160, marginTop: spacing.sm },
   imagePreview: { width: '100%', height: '100%' },
 });

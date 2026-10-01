@@ -14,8 +14,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Store, Order } from '@/api/types';
 import { ScreenBars } from '@/components/ScreenBars';
 import type { StudentStackParamList } from '@/navigation/types';
-import { getGreeting } from '@/utils';
+import { getGreeting, withOpacity } from '@/utils';
 import StoreCard from '@/components/StoreCard';
+import FriendlyError from '@/components/FriendlyError';
 import { spacing, radius } from '@/theme';
 
 type Nav = NativeStackNavigationProp<StudentStackParamList, 'Home'>;
@@ -30,18 +31,22 @@ export default function HomeScreen() {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   const greeting = getGreeting(user?.name);
 
   const fetchAll = useCallback(async () => {
+    setError('');
     try {
       const [storesRes, ordersRes] = await Promise.allSettled([
         storesApi.list(),
         ordersApi.list({ status: 'placed,accepted,processing,ready' }),
       ]);
       if (storesRes.status === 'fulfilled' && storesRes.value.data.success) {
-        setStores(resolveStores(storesRes.value.data.data as any));
+        setStores(resolveStores(storesRes.value.data.data));
+      } else if (storesRes.status === 'rejected') {
+        setError('Couldn\'t load stores. Pull down to refresh.');
       }
       if (ordersRes.status === 'fulfilled' && ordersRes.value.data.success) {
         setActiveOrders(ordersRes.value.data.data ?? []);
@@ -72,7 +77,7 @@ export default function HomeScreen() {
       <ScreenBars style="dark" backgroundColor={String(c.primaryContainer)} />
       {/* Header with gradient */}
       <LinearGradient
-        colors={[c.primaryContainer + 'CC', c.background]}
+        colors={[withOpacity(c.primaryContainer as string, 0.8), c.background]}
         locations={[0, 1]}
         style={[styles.headerGradient, { paddingTop: insets.top }]}
       >
@@ -195,6 +200,14 @@ export default function HomeScreen() {
                 Loading stores…
               </Text>
             </View>
+          ) : error ? (
+            <FriendlyError
+              emoji="🛸"
+              title="Oops, couldn't load stores"
+              subtitle={error}
+              actionLabel="Try again"
+              onAction={() => { setLoading(true); fetchAll(); }}
+            />
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🔍</Text>

@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "campusbite",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "dev.adarshg.campusbite"
+      "bundleIdentifier": "dev.adarshg.campusbite",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,8 +25,8 @@
         "backgroundColor": "#FFDCC2"
       },
       "package": "dev.adarshg.campusbite",
-      "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-font",

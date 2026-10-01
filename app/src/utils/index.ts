@@ -1,5 +1,28 @@
 import type { OrderStatus, PaymentStatus, OperatingHours } from '@/api/types';
 
+// ── Image URL resolver ────────────────────────────────────────────────────────
+
+const SERVER_URL = (() => {
+  const raw = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:5000/api';
+  const url = __DEV__ ? raw : raw.replace(/^http:/, 'https:');
+  return url.match(/^https?:\/\/[^/]*/)?.[0] ?? '';
+})();
+
+export function resolveImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${SERVER_URL}${url}`;
+}
+
+// ── Color opacity ────────────────────────────────────────────────────────────
+
+export function withOpacity(hex: string, opacity: number): string {
+  const alpha = Math.round(Math.max(0, Math.min(1, opacity)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex}${alpha}`;
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount: number | undefined | null): string {
@@ -32,7 +55,7 @@ export function formatTime(iso: string): string {
 
 // ── Operating hours ───────────────────────────────────────────────────────────
 
-export function formatOperatingHours(hours?: OperatingHours | string): string {
+export function formatOperatingHours(hours?: OperatingHours | string | null): string {
   if (!hours) return '';
   if (typeof hours === 'string') return hours;
   const open = hours.open ?? hours.opening_time;

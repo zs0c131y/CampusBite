@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native';
-import { Text, useTheme, Surface, Button, ActivityIndicator, Dialog, Portal } from 'react-native-paper';
+import { Text, useTheme, Surface, Button, ActivityIndicator, Dialog, Portal, Snackbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -10,13 +10,13 @@ import * as Haptics from 'expo-haptics';
 import { ordersApi } from '@/api/orders';
 import type { Order, OrderStatus } from '@/api/types';
 import type { StoreStackParamList } from '@/navigation/types';
-import { ORDER_STATUS_LABELS, formatCurrency, formatTime } from '@/utils';
+import { ORDER_STATUS_LABELS, formatCurrency, formatTime, withOpacity } from '@/utils';
 import { spacing, radius } from '@/theme';
 import { ScreenBars } from '@/components/ScreenBars';
+import FriendlyError from '@/components/FriendlyError';
 
 type Nav = NativeStackNavigationProp<StoreStackParamList, 'Orders'>;
 
-// Icon for each order status
 const STATUS_ICON: Record<OrderStatus, string> = {
   placed:     'clock-outline',
   accepted:   'check-circle-outline',
@@ -44,10 +44,6 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
   const next    = NEXT_STATUS[status];
   const isActive = status === 'placed' || status === 'accepted' || status === 'processing' || status === 'ready';
 
-  // For placed orders, derive what the action button should show:
-  // 1. payment pending  → "Confirm Payment" (opens dialog)
-  // 2. payment done, commitment pending → disabled "Waiting for customer…"
-  // 3. payment done, commitment confirmed (or not required) → "Accept Order"
   const paymentPending = status === 'placed' && order.payment_status === 'pending';
   const waitingCommitment = status === 'placed' && order.payment_status === 'success' && !order.is_commitment_confirmed;
 
@@ -62,20 +58,17 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
           styles.card,
           {
             backgroundColor: isActive ? c.elevation.level2 : c.surface,
-            borderColor: isActive ? c.primary + '55' : c.outlineVariant,
+            borderColor: isActive ? withOpacity(c.primary as string, 0.33) : c.outlineVariant,
             borderWidth: isActive ? 1.5 : StyleSheet.hairlineWidth,
           },
         ]}
       >
-        {/* Left accent strip */}
         {isActive && <View style={[styles.accentStrip, { backgroundColor: c.primary }]} />}
 
-        {/* Status icon */}
         <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
           <MaterialCommunityIcons name={STATUS_ICON[status] as any} size={22} color={iconFg} />
         </View>
 
-        {/* Main content */}
         <View style={styles.cardBody}>
           <View style={styles.cardRow}>
             <Text style={[styles.orderNum, { color: c.onSurface }]}>#{order.order_number}</Text>
@@ -114,7 +107,7 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
           {status === 'placed' && paymentPending && (
             <Button
               mode="contained"
-              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              onPress={onAction}
               style={styles.actionBtn}
               contentStyle={styles.actionBtnContent}
               labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
@@ -138,7 +131,7 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
           {status === 'placed' && !paymentPending && !waitingCommitment && (
             <Button
               mode="contained"
-              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              onPress={onAction}
               style={styles.actionBtn}
               contentStyle={styles.actionBtnContent}
               labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
@@ -150,7 +143,7 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
           {next && status !== 'placed' && (
             <Button
               mode="contained"
-              onPress={(e) => { e.stopPropagation?.(); onAction(); }}
+              onPress={onAction}
               style={styles.actionBtn}
               contentStyle={styles.actionBtnContent}
               labelStyle={{ fontSize: 13, fontFamily: 'Inter_600SemiBold' }}
@@ -162,7 +155,7 @@ function OrderRow({ order, onPress, onAction }: { order: Order; onPress: () => v
           {status === 'ready' && (
             <Button
               mode="outlined"
-              onPress={(e) => { e.stopPropagation?.(); onPress(); }}
+              onPress={onPress}
               style={styles.actionBtn}
               contentStyle={styles.actionBtnContent}
               labelStyle={{ fontSize: 13, fontFamily: 'Inter_500Medium' }}
@@ -187,21 +180,25 @@ export default function StoreOrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<string>('placed,accepted,processing,ready');
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
+  const [fetchError, setFetchError] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
   const c = theme.colors;
 
   const fetchOrders = useCallback(async () => {
     try {
       const { data } = await ordersApi.list(filter ? { status: filter } : undefined);
       if (data.success) setOrders(data.data ?? []);
+      setFetchError(false);
+    } catch {
+      if (!refreshing) setFetchError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter]);
+  }, [filter, refreshing]);
 
   useEffect(() => { setLoading(true); fetchOrders(); }, [fetchOrders]);
 
-  // Auto-refresh active orders
   useEffect(() => {
     if (filter.includes('placed')) {
       const interval = setInterval(fetchOrders, 8000);
@@ -214,7 +211,6 @@ export default function StoreOrdersScreen() {
     const next = NEXT_STATUS[status];
     if (!next) return;
 
-    // Placed + payment pending → open payment confirmation dialog
     if (status === 'placed' && order.payment_status === 'pending') {
       setConfirmOrder(order);
       return;
@@ -225,13 +221,10 @@ export default function StoreOrdersScreen() {
       await ordersApi.updateStatus(order._id, next.next);
       await fetchOrders();
     } catch (e: any) {
-      console.error('updateStatus error:', (e as any).response?.data ?? e);
+      setSnackMsg(e?.response?.data?.message ?? e?.message ?? 'Failed to update order status');
     }
   };
 
-  // Only confirms payment — does NOT accept the order.
-  // After payment is confirmed the card re-renders: either "Waiting for customer"
-  // (if commitment is required) or "Accept Order" (if commitment is not needed).
   const handleConfirmPayment = async () => {
     if (!confirmOrder) return;
     try {
@@ -239,17 +232,30 @@ export default function StoreOrdersScreen() {
       await ordersApi.confirmPayment(confirmOrder._id);
       await fetchOrders();
     } catch (e: any) {
-      console.error('confirmPayment error:', (e as any).response?.data ?? e);
+      setSnackMsg(e?.response?.data?.message ?? e?.message ?? 'Failed to confirm payment');
     } finally {
       setConfirmOrder(null);
     }
   };
 
+  if (fetchError) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <ScreenBars style="dark" backgroundColor={c.surface as string} />
+        <FriendlyError
+          title="Couldn't load orders"
+          subtitle="Something went wrong. Pull down or tap Retry."
+          actionLabel="Retry"
+          onAction={() => { setFetchError(false); setLoading(true); fetchOrders(); }}
+        />
+      </View>
+    );
+  }
+
   return (
 <View style={[styles.container, { backgroundColor: c.background }]}>
       <ScreenBars style="dark" backgroundColor={c.surface as string} />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: c.surface }]}>
         <View style={styles.headerTitle}>
           <MaterialCommunityIcons name="silverware-fork-knife" size={22} color={c.primary} />
@@ -260,7 +266,6 @@ export default function StoreOrdersScreen() {
         </Text>
       </View>
 
-      {/* Filters */}
       <View style={[styles.filterRow, { backgroundColor: c.surfaceVariant }]}>
         {FILTERS.map((f) => {
           const active = filter === f.value;
@@ -325,7 +330,6 @@ export default function StoreOrdersScreen() {
         )}
       />
 
-      {/* Payment confirmation dialog */}
       <Portal>
         <Dialog
           visible={!!confirmOrder}
@@ -363,6 +367,15 @@ export default function StoreOrdersScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Snackbar
+        visible={snackMsg !== ''}
+        onDismiss={() => setSnackMsg('')}
+        duration={Snackbar.DURATION_SHORT}
+        action={{ label: 'Dismiss', onPress: () => setSnackMsg('') }}
+      >
+        {snackMsg}
+      </Snackbar>
     </View>
   );
 }
@@ -401,7 +414,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
 
-  // Card
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -453,7 +465,6 @@ const styles = StyleSheet.create({
   actionBtn: { marginTop: spacing.xs, borderRadius: radius.lg },
   actionBtnContent: { height: 44, paddingHorizontal: spacing.sm },
 
-  // Empty
   center: { paddingTop: 60, alignItems: 'center' },
   empty: { paddingTop: 60, alignItems: 'center', gap: spacing.sm },
   emptyIconWrap: {

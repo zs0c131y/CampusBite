@@ -127,7 +127,7 @@ export default function CheckoutScreen() {
 
       {/* ── Big gradient hero header ─────────────────────────────────────── */}
       <LinearGradient
-        colors={[c.primary, '#7A3C00']}
+        colors={[c.primary, c.secondary as string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + spacing.sm }]}

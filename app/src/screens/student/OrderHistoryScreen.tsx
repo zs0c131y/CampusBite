@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ScreenBars } from '@/components/ScreenBars';
+import FriendlyError from '@/components/FriendlyError';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -194,12 +195,16 @@ export default function OrderHistoryScreen() {
   const [orders, setOrders]       = useState<Order[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
   const [filter, setFilter]       = useState('');
 
   const fetchOrders = useCallback(async () => {
+    setError('');
     try {
       const { data } = await ordersApi.list(filter ? { status: filter } : undefined);
       if (data.success) setOrders(data.data ?? []);
+    } catch (e: any) {
+      setError(e.response?.data?.message ?? e.message ?? 'Could not load orders.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -268,6 +273,15 @@ export default function OrderHistoryScreen() {
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
+            error ? (
+              <FriendlyError
+                emoji="😵"
+                title="Couldn't load orders"
+                subtitle={error}
+                actionLabel="Try again"
+                onAction={() => { setLoading(true); fetchOrders(); }}
+              />
+            ) : (
             <View style={styles.empty}>
               <View style={[styles.emptyIconWrap, { backgroundColor: c.surfaceVariant }]}>
                 <MaterialCommunityIcons
@@ -281,6 +295,7 @@ export default function OrderHistoryScreen() {
                 Your order history will appear here
               </Text>
             </View>
+            )
           }
           renderItem={({ item }) => (
             <OrderCard

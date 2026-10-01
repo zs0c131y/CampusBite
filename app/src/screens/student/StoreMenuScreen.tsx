@@ -17,19 +17,12 @@ import * as Haptics from 'expo-haptics';
 import { ScreenBars } from '@/components/ScreenBars';
 
 import { storesApi, resolveMenuItems } from '@/api/stores';
-import { SERVER_URL } from '@/api/client';
 import { useCart } from '@/contexts/CartContext';
 import type { MenuItem, Store } from '@/api/types';
 import type { StoreMenuScreenProps } from '@/navigation/types';
-import { formatCurrency, formatOperatingHours } from '@/utils';
+import { resolveImageUrl, formatOperatingHours } from '@/utils';
 import MenuItemCard from '@/components/MenuItemCard';
 import { spacing, radius } from '@/theme';
-
-function resolveImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${SERVER_URL}${url}`;
-}
 
 const HERO_HEIGHT = 260;
 
@@ -58,11 +51,11 @@ export default function StoreMenuScreen({ route, navigation }: StoreMenuScreenPr
         storesApi.menu(storeId),
       ]);
       if (storeRes.status === 'fulfilled' && storeRes.value.data.success) {
-        const d = storeRes.value.data.data as any;
-        setStore(d?.store ?? d);
+        const d = storeRes.value.data.data;
+        setStore('store' in d ? d.store : d);
       }
       if (menuRes.status === 'fulfilled' && menuRes.value.data.success) {
-        const items = resolveMenuItems(menuRes.value.data.data as any);
+        const items = resolveMenuItems(menuRes.value.data.data);
         setMenu(items);
         const cats = Array.from(new Set(items.map((i) => i.category).filter(Boolean))) as string[];
         setCategories(cats);
