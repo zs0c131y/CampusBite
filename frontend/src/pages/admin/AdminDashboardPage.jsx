@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/shared/Brand";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -993,15 +994,9 @@ export default function AdminDashboardPage() {
   };
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="border-b bg-card lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r">
+      <aside className="admin-rail border-b bg-foreground text-background lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between p-5 lg:block">
-          <Link
-            to="/admin/overview"
-            className="flex items-center gap-2 text-xl font-bold text-primary"
-          >
-            <ChefHat className="h-7 w-7" />
-            CampusBite
-          </Link>
+          <Brand to="/admin/overview" />
           <Badge variant="secondary" className="lg:mt-4">
             Admin console
           </Badge>
@@ -1018,7 +1013,7 @@ export default function AdminDashboardPage() {
                 key={id}
                 to={`/admin/${id}`}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isActive || (id === "overview" && location.pathname === "/admin") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`
+                  `sidebar-link whitespace-nowrap ${isActive || (id === "overview" && location.pathname === "/admin") ? "active" : ""}`
                 }
               >
                 <Icon className="h-4 w-4" />
@@ -1029,7 +1024,7 @@ export default function AdminDashboardPage() {
         </nav>
         <div className="hidden border-t p-5 lg:block">
           <p className="truncate text-sm font-medium">{user.name}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="mt-1 truncate text-xs text-background/60">
             {user.email}
           </p>
           <Button
@@ -1046,7 +1041,7 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
       <div className="min-w-0 flex-1 p-4 sm:p-8 lg:p-10">
-        <header className="mb-8 flex items-start justify-between gap-4">
+        <header className="page-heading flex items-start justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">
               Campus administration

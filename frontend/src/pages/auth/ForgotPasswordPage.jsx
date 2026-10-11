@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full">
           {/* Logo / Branding */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+            <h1 className="font-display text-4xl font-bold text-primary tracking-tight">
               CampusBite
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+          <Card className="border border-border/80 bg-card/90  ">
             <CardHeader className="text-center pb-2">
               <CardTitle className="font-display text-2xl">
                 Forgot Password
@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
             <CardFooter className="justify-center pb-6">
               <Link
                 to="/login"
-                className="flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                className="flex items-center gap-1 text-sm text-primary hover:text-primary font-medium hover:underline"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Login

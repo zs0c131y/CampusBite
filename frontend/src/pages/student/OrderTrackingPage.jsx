@@ -64,7 +64,7 @@ function OrderTimeline({ currentStatus }) {
             <div
               className={`shrink-0 w-[30px] h-[30px] rounded-full flex items-center justify-center z-10 ${
                 isCurrent
-                  ? "bg-orange-600 text-white ring-4 ring-orange-100"
+                  ? "bg-primary text-white ring-4 ring-orange-100"
                   : isCompleted
                     ? "bg-green-500 text-white"
                     : "bg-muted text-muted-foreground"
@@ -84,7 +84,7 @@ function OrderTimeline({ currentStatus }) {
               <p
                 className={`text-sm font-medium ${
                   isCurrent
-                    ? "text-orange-600"
+                    ? "text-primary"
                     : isCompleted
                       ? "text-foreground"
                       : "text-muted-foreground"
@@ -155,10 +155,10 @@ function OtpDisplay({ otp, expiresAt }) {
   const digits = otp.toString().split("");
 
   return (
-    <Card className="border-2 border-orange-200 bg-orange-50/50">
+    <Card className="border-foreground/20 bg-accent">
       <CardContent className="p-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <Bell className="h-5 w-5 text-orange-600" />
+          <Bell className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-orange-800">Pickup OTP</h3>
         </div>
 
@@ -167,14 +167,14 @@ function OtpDisplay({ otp, expiresAt }) {
           {digits.map((digit, idx) => (
             <div
               key={idx}
-              className="w-10 h-12 sm:w-12 sm:h-14 rounded-lg bg-white border-2 border-orange-300 flex items-center justify-center text-xl sm:text-2xl font-bold text-orange-700 shadow-sm"
+              className="w-10 h-12 sm:w-12 sm:h-14 rounded-lg bg-white border-2 border-orange-300 flex items-center justify-center text-xl sm:text-2xl font-bold text-primary shadow-sm"
             >
               {digit}
             </div>
           ))}
         </div>
 
-        <p className="text-sm text-orange-700 mb-2">
+        <p className="text-sm text-primary mb-2">
           Show this OTP to the store to collect your order
         </p>
 
@@ -324,7 +324,7 @@ export default function OrderTrackingPage() {
         </Button>
 
         {/* Order Header */}
-        <div className="mb-6 rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+        <div className="page-heading">
           <div className="flex items-start justify-between flex-wrap gap-2">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
@@ -381,7 +381,7 @@ export default function OrderTrackingPage() {
         </Card>
 
         {needsCommitmentConfirmation && (
-          <Card className="mb-6 border-orange-200 bg-orange-50/60">
+          <Card className="mb-6 border-primary/20 bg-primary/5">
             <CardContent className="p-4 space-y-3">
               <p className="text-sm font-medium text-orange-900">
                 Confirm you are on the way
@@ -492,7 +492,7 @@ export default function OrderTrackingPage() {
         <div className="text-center">
           <Link
             to="/orders"
-            className="text-sm text-orange-600 hover:text-orange-700 hover:underline"
+            className="text-sm text-primary hover:text-primary hover:underline"
           >
             View All Orders
           </Link>

@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { DesktopHint } from "@/components/shared/DesktopHint";
 import {
   Dialog,
   DialogContent,
@@ -246,7 +245,6 @@ export default function OrderDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <DesktopHint />
 
       {/* Header */}
       <div className="flex items-center gap-3">

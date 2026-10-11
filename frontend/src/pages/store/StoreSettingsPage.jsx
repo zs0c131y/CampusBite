@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
-import { DesktopHint } from '@/components/shared/DesktopHint'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { validateUpiId } from '@/lib/validators'
@@ -219,10 +218,9 @@ export default function StoreSettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <DesktopHint />
 
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="page-heading flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/store/dashboard">
             <ArrowLeft className="h-5 w-5" />

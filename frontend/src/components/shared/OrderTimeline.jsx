@@ -10,7 +10,7 @@ const ORDER_STEPS = [
 ]
 
 function getStepIndex(status) {
-  const index = ORDER_STEPS.findIndex((step) => step.key === status)
+  const index = ORDER_STEPS.findIndex((step) => step.key === (status === 'processing' ? 'preparing' : status))
   return index >= 0 ? index : -1
 }
 
@@ -30,7 +30,7 @@ export function OrderTimeline({ currentStatus }) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between w-full">
+        <div className="order-timeline flex items-center justify-between w-full">
           {ORDER_STEPS.map((step, index) => {
             const isCompleted = index < currentIndex
             const isCurrent = index === currentIndex

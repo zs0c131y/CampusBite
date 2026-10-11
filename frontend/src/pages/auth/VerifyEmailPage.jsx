@@ -122,7 +122,7 @@ export default function VerifyEmailPage() {
         <div className="w-full">
           {/* Logo / Branding */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+            <h1 className="font-display text-4xl font-bold text-primary tracking-tight">
               CampusBite
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -130,7 +130,7 @@ export default function VerifyEmailPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+          <Card className="border border-border/80 bg-card/90  ">
             <CardHeader className="text-center pb-2">
               <CardTitle className="font-display text-2xl">
                 Verify Your Email
@@ -142,8 +142,8 @@ export default function VerifyEmailPage() {
                 {/* Loading state */}
                 {status === "loading" && (
                   <>
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-                      <Loader2 className="h-8 w-8 text-orange-600 animate-spin" />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
                     </div>
                     <div className="space-y-2">
                       <p className="font-medium text-foreground">

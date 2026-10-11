@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
         <div className="w-full">
           {/* Logo / Branding */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+            <h1 className="font-display text-4xl font-bold text-primary tracking-tight">
               CampusBite
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -97,10 +97,10 @@ export default function ResetPasswordPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+          <Card className="border border-border/80 bg-card/90  ">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-3">
-                <KeyRound className="h-6 w-6 text-orange-600" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-secondary mb-3">
+                <KeyRound className="h-6 w-6 text-primary" />
               </div>
               <CardTitle className="font-display text-2xl">
                 Reset Password
@@ -213,7 +213,7 @@ export default function ResetPasswordPage() {
             <CardFooter className="justify-center pb-6">
               <Link
                 to="/login"
-                className="text-sm text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                className="text-sm text-primary hover:text-primary font-medium hover:underline"
               >
                 Back to Login
               </Link>

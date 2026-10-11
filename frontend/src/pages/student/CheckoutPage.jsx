@@ -205,7 +205,7 @@ export default function CheckoutPage() {
 
   if (!orderResult && cartItems.length === 0 && !paymentSession) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
         <div className="text-center">
           <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Nothing to checkout</h2>
@@ -223,7 +223,7 @@ export default function CheckoutPage() {
     const crossCheckText = buildCrossCheckText(orderResult);
 
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4 py-8">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg">
           <Card className="border-green-200 shadow-lg">
             <CardContent className="p-6 space-y-5">
@@ -270,11 +270,11 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800 flex items-start gap-2">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-orange-800 flex items-start gap-2">
                 <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
                 <p>
-                  Share Order Number + Payment Reference + Transaction ID with
-                  the store for cross-check.
+                  Provide your order number, payment reference, and transaction ID to
+                  the store if payment verification is required.
                 </p>
               </div>
 
@@ -335,7 +335,7 @@ export default function CheckoutPage() {
   const qrUrl = uploadedStoreQr || generatedQrUrl;
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         <Button
           variant="ghost"
@@ -347,6 +347,7 @@ export default function CheckoutPage() {
           Back to Cart
         </Button>
 
+        <div className="page-heading"><p className="eyebrow mb-3 text-primary">Review / Payment / Pickup</p><h1>Checkout</h1><p className="mt-3 text-sm text-muted-foreground">Review your order and complete payment before pickup.</p></div>
         <div className="grid grid-cols-1 xl:grid-cols-[1.45fr_1fr] gap-6">
           <Card className="overflow-hidden">
             <CardHeader className="pb-3 border-b bg-card/70">
@@ -458,7 +459,7 @@ export default function CheckoutPage() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Payment Desk</CardTitle>
+              <CardTitle className="text-lg">Payment details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!paymentSession ? (

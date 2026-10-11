@@ -243,7 +243,6 @@ export default function RegisterPage() {
     } catch (error) {
       const message =
         error.response?.data?.message ||
-        error.message ||
         "Registration failed. Please try again.";
       toast.error(message);
     } finally {
@@ -262,7 +261,7 @@ export default function RegisterPage() {
         <div className="w-full">
           {/* Logo / Branding */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+            <h1 className="font-display text-4xl font-bold text-primary tracking-tight">
               CampusBite
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -270,7 +269,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 bg-card/90 shadow-[0_22px_36px_-28px_rgba(32,23,15,0.68)] backdrop-blur-sm">
+          <Card className="border border-border/80 bg-card/90  ">
             <CardHeader className="text-center pb-2">
               <CardTitle className="font-display text-2xl">
                 {step === 1 ? "Choose your role" : "Fill in your details"}
@@ -285,12 +284,12 @@ export default function RegisterPage() {
               <div className="flex items-center justify-center gap-2 pt-4">
                 <div
                   className={`h-2 w-16 rounded-full transition-colors ${
-                    step >= 1 ? "bg-orange-500" : "bg-gray-200"
+                    step >= 1 ? "bg-primary" : "bg-gray-200"
                   }`}
                 />
                 <div
                   className={`h-2 w-16 rounded-full transition-colors ${
-                    step >= 2 ? "bg-orange-500" : "bg-gray-200"
+                    step >= 2 ? "bg-primary" : "bg-gray-200"
                   }`}
                 />
               </div>
@@ -311,14 +310,14 @@ export default function RegisterPage() {
                           onClick={() => handleRoleSelect(role.value)}
                           className={`flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
                             isSelected
-                              ? "border-orange-500 bg-orange-50 shadow-sm"
+                              ? "border-primary bg-primary/5 shadow-sm"
                               : "border-gray-200 hover:border-orange-300"
                           }`}
                         >
                           <div
                             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
                               isSelected
-                                ? "bg-orange-500 text-white"
+                                ? "bg-primary text-white"
                                 : "bg-gray-100 text-gray-600"
                             }`}
                           >
@@ -392,13 +391,7 @@ export default function RegisterPage() {
                     {(selectedRole === "student" ||
                       selectedRole === "faculty") && (
                       <p className="text-xs text-muted-foreground">
-                        Use your official Christ University email. Subdomains
-                        like
-                        <span className="font-medium">
-                          {" "}
-                          course.christuniversity.in
-                        </span>{" "}
-                        are accepted.
+                        Use your official Christ University email.
                       </p>
                     )}
                     {errors.email && (
@@ -635,7 +628,7 @@ export default function RegisterPage() {
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                  className="text-primary hover:text-primary font-medium hover:underline"
                 >
                   Login
                 </Link>

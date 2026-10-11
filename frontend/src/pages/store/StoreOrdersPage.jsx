@@ -29,7 +29,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { DesktopHint } from "@/components/shared/DesktopHint";
 import { usePolling } from "@/hooks/usePolling";
 import api from "@/lib/api";
 import {
@@ -354,10 +353,9 @@ export default function StoreOrdersPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <DesktopHint />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/store/dashboard">
@@ -366,15 +364,15 @@ export default function StoreOrdersPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Order Management
+              Order board
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
               {orders.length} total order{orders.length !== 1 ? "s" : ""}
               {hasNewOrders && (
-                <span className="ml-2 inline-flex items-center gap-1 text-orange-600 font-medium">
+                <span className="ml-2 inline-flex items-center gap-1 text-primary font-medium">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                   </span>
                   New orders!
                 </span>
@@ -461,7 +459,7 @@ export default function StoreOrdersPage() {
                         ? "Employee ID"
                         : null;
                   return (
-                    <Card key={orderId} className="overflow-hidden">
+                    <Card key={orderId} className="order-receipt overflow-hidden">
                       <CardContent className="p-4 sm:p-5">
                         {/* Header row */}
                         <div className="flex flex-wrap items-start justify-between gap-2">

@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
-import { DesktopHint } from "@/components/shared/DesktopHint";
 import {
   Dialog,
   DialogContent,
@@ -246,10 +245,9 @@ export default function MenuManagementPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <DesktopHint />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/store/dashboard">
@@ -258,7 +256,7 @@ export default function MenuManagementPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Menu Management
+              The menu
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
               {menuItems.length} item{menuItems.length !== 1 ? "s" : ""} total
@@ -311,7 +309,7 @@ export default function MenuManagementPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="management-menu grid grid-cols-1 gap-3">
           {filteredItems.map((item) => {
             const itemImage = resolveMediaUrl(
               item.image_url || item.imageUrl || "",
@@ -364,6 +362,7 @@ export default function MenuManagementPage() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
                           <Switch
+                            aria-label={`${item.name} availability`}
                             checked={item.is_available}
                             onCheckedChange={() =>
                               handleToggleAvailability(item)
@@ -378,7 +377,8 @@ export default function MenuManagementPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-11 w-11"
+                            aria-label={`Edit ${item.name}`}
                             onClick={() => handleOpenEdit(item)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -386,7 +386,8 @@ export default function MenuManagementPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-11 w-11 text-destructive hover:text-destructive"
+                            aria-label={`Delete ${item.name}`}
                             onClick={() =>
                               setDeleteDialog({ open: true, item })
                             }

@@ -60,7 +60,7 @@ function OrderCard({ order }) {
     .join(', ')
 
   return (
-    <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-24px_rgba(32,23,15,0.6)]">
+    <Card className="transition-all duration-200  hover:">
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div>
@@ -263,7 +263,8 @@ export default function OrderHistoryPage() {
         )}
 
         {/* Page Header */}
-        <div className="mb-6 rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.66)] backdrop-blur-sm">
+        <div className="page-heading">
+          <p className="eyebrow mb-3 text-primary">Order history and status</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             My Orders
           </h1>

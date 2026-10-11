@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils"
 const Card = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
+    data-ui="card"
     className={cn(
-      "rounded-2xl border border-border/80 bg-card/95 text-card-foreground shadow-[0_18px_32px_-30px_rgba(32,23,15,0.55)] backdrop-blur-[1px] transition-all duration-200",
+      "rounded-2xl border border-border bg-card text-card-foreground transition-colors duration-200",
       className
     )}
     {...props}
@@ -26,7 +27,7 @@ const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
   <h3
     ref={ref}
     className={cn(
-      "font-display text-xl font-semibold leading-snug tracking-[-0.015em]",
+      "text-lg font-semibold leading-snug tracking-[-0.015em]",
       className
     )}
     {...props}

@@ -1,424 +1,307 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { createElement, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  UtensilsCrossed,
   ShoppingCart,
   User,
-  Menu,
-  X,
   Store,
   ClipboardList,
   Settings,
   LogOut,
-  ChefHat,
+  LayoutDashboard,
+  Menu,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/shared/Brand";
+
+const studentLinks = [
+  { to: "/stores", label: "Browse outlets", icon: Store },
+  { to: "/orders", label: "My orders", icon: ClipboardList },
+];
+const storeLinks = [
+  { to: "/store/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/store/orders", label: "Orders", icon: ClipboardList },
+  { to: "/store/menu", label: "Menu", icon: UtensilsCrossed },
+  { to: "/store/settings", label: "Settings", icon: Settings },
+];
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { getItemCount } = useCart();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-
-  const itemCount = getItemCount();
-  const isStoreEmployee = user?.role === "store_employee";
-
-  const handleLogout = async () => {
+  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const isStore = user?.role === "store_employee";
+  const links = isStore ? storeLinks : studentLinks;
+  const count = getItemCount();
+  const signOut = async () => {
     await logout();
-    setProfileDropdownOpen(false);
-    setMobileMenuOpen(false);
+    setMenuOpen(false);
+    setAccountOpen(false);
     navigate("/login");
   };
-
-  const closeMobileMenu = () => setMobileMenuOpen(false);
-
+  const brand = <Brand />;
+  const currentSection =
+    storeLinks.find(({ to }) => pathname.startsWith(to))?.label || "Account";
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/88 shadow-[0_14px_28px_-26px_rgba(32,23,15,0.85)] backdrop-blur-md supports-[backdrop-filter]:bg-background/78 [padding-top:env(safe-area-inset-top)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
+    <>
+      {isStore && (
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col bg-foreground px-5 py-8 text-background lg:flex">
+          {brand}
+          <p className="eyebrow mb-6 mt-10 text-background/45">
+            Store workspace
+          </p>
+          <nav aria-label="Store navigation" className="space-y-2">
+            {storeLinks.map(({ to, label, icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `sidebar-link ${isActive ? "active" : ""}`
+                }
+              >
+                {createElement(icon, { size: 19 })}
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="mt-auto border-t border-background/20 pt-6">
+            <p className="truncate text-sm font-semibold">{user?.name}</p>
             <Link
-              to="/"
-              className="group inline-flex items-center gap-2 rounded-xl px-2 py-1 text-xl font-bold text-primary transition-colors hover:bg-accent/40"
+              to="/profile"
+              className="mt-2 block text-xs text-background/60"
             >
-              <ChefHat className="h-7 w-7 transition-transform duration-200 group-hover:-translate-y-0.5" />
-              <span className="font-display tracking-tight">CampusBite</span>
+              Account settings
             </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-1">
-            {!isAuthenticated ? (
-              <>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-4"
-                  asChild
-                >
-                  <Link to="/login">Login</Link>
-                </Button>
-                <Button className="h-9 rounded-full px-4" asChild>
-                  <Link to="/register">Register</Link>
-                </Button>
-              </>
-            ) : isStoreEmployee ? (
-              <>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link
-                    to="/store/dashboard"
-                    className="flex items-center space-x-1"
-                  >
-                    <Store className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link
-                    to="/store/orders"
-                    className="flex items-center space-x-1"
-                  >
-                    <ClipboardList className="h-4 w-4" />
-                    <span>Orders</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link
-                    to="/store/menu"
-                    className="flex items-center space-x-1"
-                  >
-                    <ChefHat className="h-4 w-4" />
-                    <span>Menu</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link
-                    to="/store/settings"
-                    className="flex items-center space-x-1"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </Button>
-                <NotificationBell />
-                {/* Profile Dropdown */}
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="relative rounded-full border border-transparent hover:border-border/80"
-                    aria-label="Open account menu"
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border/80 bg-card/95 shadow-xl z-20 backdrop-blur-sm">
-                        <div className="px-4 py-3 border-b border-border/80">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {user.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {user.email}
-                          </p>
-                        </div>
-                        <Link
-                          to="/profile"
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-accent/55"
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          Profile
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50/70 rounded-b-2xl border-t border-border/80"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Logout
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link to="/stores" className="flex items-center space-x-1">
-                    <Store className="h-4 w-4" />
-                    <span>Browse Stores</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link to="/orders" className="flex items-center space-x-1">
-                    <ClipboardList className="h-4 w-4" />
-                    <span>My Orders</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 rounded-full px-3.5"
-                  asChild
-                >
-                  <Link
-                    to="/cart"
-                    className="relative flex items-center space-x-1"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Cart</span>
-                    {itemCount > 0 && (
-                      <span className="absolute -top-1 -right-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                        {itemCount > 99 ? "99+" : itemCount}
-                      </span>
-                    )}
-                  </Link>
-                </Button>
-                <NotificationBell />
-                {/* Profile Dropdown */}
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="relative rounded-full border border-transparent hover:border-border/80"
-                    aria-label="Open account menu"
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border/80 bg-card/95 shadow-xl z-20 backdrop-blur-sm">
-                        <div className="px-4 py-3 border-b border-border/80">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {user.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {user.email}
-                          </p>
-                        </div>
-                        <Link
-                          to="/profile"
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center px-4 py-2.5 text-sm text-foreground hover:bg-accent/55"
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          Profile
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex w-full items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50/70 rounded-b-2xl border-t border-border/80"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Logout
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
-            {isAuthenticated && !isStoreEmployee && itemCount > 0 && (
-              <Button variant="ghost" size="icon" asChild className="mr-1">
-                <Link to="/cart" className="relative">
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {itemCount > 99 ? "99+" : itemCount}
-                  </span>
-                </Link>
-              </Button>
-            )}
-            {isAuthenticated && <NotificationBell />}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            <button
+              onClick={signOut}
+              className="mt-5 flex items-center gap-2 text-sm text-background/70"
             >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </Button>
+              <LogOut size={16} /> Sign out
+            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
-          <div className="px-4 py-3 space-y-1">
-            {!isAuthenticated ? (
+        </aside>
+      )}
+      <header className="sticky top-0 z-40 border-b bg-background/95 [padding-top:env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-8">
+          <div className={isStore ? "lg:hidden" : ""}>{brand}</div>
+          {isStore && (
+            <p className="hidden text-sm text-muted-foreground lg:block">
+              Store management <span className="mx-2 text-border">/</span>
+              <span className="font-semibold text-foreground">
+                {currentSection}
+              </span>
+            </p>
+          )}
+          <nav
+            aria-label="Main navigation"
+            className={
+              isStore
+                ? "hidden items-center gap-2 md:flex lg:hidden"
+                : "hidden items-center gap-2 md:flex"
+            }
+          >
+            {isAuthenticated &&
+              links.map(({ to, label, icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${isActive ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`
+                  }
+                >
+                  {createElement(icon, { size: 17 })}
+                  {label}
+                </NavLink>
+              ))}
+            {!isAuthenticated && (
               <>
-                <Link
-                  to="/login"
-                  onClick={closeMobileMenu}
-                  className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                <a
+                  href="/#how-it-works"
+                  className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={closeMobileMenu}
-                  className="block px-3 py-2 rounded-lg text-base font-medium text-white bg-primary hover:bg-primary/90 text-center"
+                  How it works
+                </a>
+                <a
+                  href="/#for-stores"
+                  className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
-                  Register
-                </Link>
+                  For stores
+                </a>
               </>
-            ) : isStoreEmployee ? (
+            )}
+          </nav>
+          <div className="flex items-center gap-1 sm:gap-3">
+            {isAuthenticated ? (
               <>
-                <div className="px-3 py-2 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
+                {isStore && pathname !== "/store/orders" && (
+                  <Button
+                    variant="outline"
+                    className="hidden lg:inline-flex"
+                    asChild
+                  >
+                    <Link to="/store/orders">
+                      <ClipboardList size={17} /> View orders
+                    </Link>
+                  </Button>
+                )}
+                {!isStore && (
+                  <Button
+                    asChild
+                    className="hidden bg-foreground text-background hover:bg-foreground/85 md:inline-flex"
+                  >
+                    <Link to="/cart">
+                      <ShoppingCart size={17} /> Cart{" "}
+                      <span className="ml-1 rounded-full bg-accent px-2 text-xs text-foreground">
+                        {count}
+                      </span>
+                    </Link>
+                  </Button>
+                )}
+                <NotificationBell />
+                <div className="relative">
+                  <button
+                    onClick={() => setAccountOpen(!accountOpen)}
+                    aria-label="Account menu"
+                    aria-expanded={accountOpen}
+                    className="grid h-10 w-10 place-items-center rounded-full border bg-secondary text-sm font-bold"
+                  >
+                    {user?.name?.slice(0, 1).toUpperCase() || (
+                      <User size={18} />
+                    )}
+                  </button>
+                  {accountOpen && (
+                    <>
+                      <button
+                        className="fixed inset-0 z-40 cursor-default"
+                        aria-label="Close account menu"
+                        onClick={() => setAccountOpen(false)}
+                      />
+                      <div className="absolute right-0 top-13 z-50 w-60 rounded-2xl border bg-card p-2 shadow-lg">
+                        <div className="border-b p-3">
+                          <p className="truncate text-sm font-semibold">
+                            {user?.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {user?.email}
+                          </p>
+                        </div>
+                        <Link
+                          to="/profile"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2 rounded-lg p-3 text-sm hover:bg-secondary"
+                        >
+                          <User size={16} /> My account
+                        </Link>
+                        <button
+                          onClick={signOut}
+                          className="flex w-full items-center gap-2 rounded-lg p-3 text-sm text-destructive hover:bg-destructive/5"
+                        >
+                          <LogOut size={16} /> Sign out
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <Link
-                  to="/profile"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <User className="h-5 w-5 mr-3" />
-                  Profile
-                </Link>
-                <Link
-                  to="/store/dashboard"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <Store className="h-5 w-5 mr-3" />
-                  Dashboard
-                </Link>
-                <Link
-                  to="/store/orders"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ClipboardList className="h-5 w-5 mr-3" />
-                  Orders
-                </Link>
-                <Link
-                  to="/store/menu"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ChefHat className="h-5 w-5 mr-3" />
-                  Menu
-                </Link>
-                <Link
-                  to="/store/settings"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <Settings className="h-5 w-5 mr-3" />
-                  Settings
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 mt-2 border-t border-gray-100 pt-3"
-                >
-                  <LogOut className="h-5 w-5 mr-3" />
-                  Logout
-                </button>
+                {isStore && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    aria-label={
+                      menuOpen ? "Close navigation" : "Open navigation"
+                    }
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen(!menuOpen)}
+                  >
+                    {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                  </Button>
+                )}
               </>
             ) : (
               <>
-                <div className="px-3 py-2 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
-                </div>
-                <Link
-                  to="/profile"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <User className="h-5 w-5 mr-3" />
-                  Profile
-                </Link>
-                <Link
-                  to="/stores"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <Store className="h-5 w-5 mr-3" />
-                  Browse Stores
-                </Link>
-                <Link
-                  to="/orders"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ClipboardList className="h-5 w-5 mr-3" />
-                  My Orders
-                </Link>
-                <Link
-                  to="/cart"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ShoppingCart className="h-5 w-5 mr-3" />
-                  Cart
-                  {itemCount > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                      {itemCount}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 mt-2 border-t border-gray-100 pt-3"
-                >
-                  <LogOut className="h-5 w-5 mr-3" />
-                  Logout
-                </button>
+                <Button variant="ghost" className="px-2 sm:px-4" asChild>
+                  <Link to="/login">Sign in</Link>
+                </Button>
+                <Button className="px-3 sm:px-4" asChild>
+                  <Link to="/register">Get started</Link>
+                </Button>
               </>
             )}
           </div>
         </div>
+        {!isAuthenticated && (
+          <nav
+            aria-label="Public navigation"
+            className="flex justify-center gap-6 border-t py-2 md:hidden"
+          >
+            <a
+              href="/#how-it-works"
+              className="px-2 py-1 text-xs font-medium text-muted-foreground"
+            >
+              How it works
+            </a>
+            <a
+              href="/#for-stores"
+              className="px-2 py-1 text-xs font-medium text-muted-foreground"
+            >
+              For stores
+            </a>
+          </nav>
+        )}
+        {isStore && menuOpen && (
+          <nav
+            aria-label="Mobile store navigation"
+            className="grid grid-cols-2 gap-2 border-t p-4 md:hidden"
+          >
+            {storeLinks.map(({ to, label, icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-xl p-3 text-sm ${isActive ? "bg-secondary font-semibold" : ""}`
+                }
+              >
+                {createElement(icon, { size: 18 })}
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+        )}
+      </header>
+      {isAuthenticated && !isStore && (
+        <nav
+          aria-label="Mobile navigation"
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card px-2 pt-2 [padding-bottom:max(.5rem,env(safe-area-inset-bottom))] md:hidden"
+        >
+          {[
+            ...studentLinks,
+            {
+              to: "/cart",
+              label: count ? `Cart (${count})` : "Cart",
+              icon: ShoppingCart,
+            },
+            { to: "/profile", label: "Account", icon: User },
+          ].map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-semibold ${isActive ? "bg-primary/8 text-primary" : "text-muted-foreground"}`
+              }
+            >
+              {createElement(icon, { size: 19 })}
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       )}
-    </nav>
+    </>
   );
 }

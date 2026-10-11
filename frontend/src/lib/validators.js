@@ -38,7 +38,7 @@ export function validateChristUniversityEmail(email) {
   if (!isChristUniversityEmail(email)) {
     return {
       valid: false,
-      error: 'Use your christuniversity.in email (subdomains like course.christuniversity.in are allowed)',
+      error: 'Use your official Christ University email.',
     }
   }
 

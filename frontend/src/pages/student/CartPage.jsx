@@ -10,13 +10,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 import { formatCurrency } from '@/lib/utils'
 
 export default function CartPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const cart = useCart()
 
   const subtotal = cart.getTotal()
@@ -25,7 +23,7 @@ export default function CartPage() {
 
   if (cart.items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
         <div className="text-center">
           <div className="mx-auto w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
             <ShoppingCart className="h-9 w-9 text-muted-foreground" />
@@ -47,8 +45,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
+    <div className="min-h-screen bg-transparent">
+      <div className="max-w-5xl mx-auto py-6 sm:py-8">
         {/* Back Button */}
         <Button
           variant="ghost"
@@ -61,9 +59,10 @@ export default function CartPage() {
         </Button>
 
         {/* Page Header */}
-        <div className="mb-6">
+        <div className="page-heading">
+          <p className="eyebrow mb-3 text-primary">Order review</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-            Your Cart
+            Your cart
           </h1>
           {cart.storeName && (
             <p className="text-muted-foreground mt-1 text-sm">
@@ -72,7 +71,7 @@ export default function CartPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-3">
             {cart.items.map((item) => (
@@ -99,7 +98,8 @@ export default function CartPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11"
+                          aria-label={`Remove one ${item.name}`}
                           onClick={() =>
                             cart.updateQuantity(item.id, item.quantity - 1)
                           }
@@ -112,7 +112,8 @@ export default function CartPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11"
+                          aria-label={`Add one ${item.name}`}
                           onClick={() =>
                             cart.updateQuantity(item.id, item.quantity + 1)
                           }
@@ -122,7 +123,8 @@ export default function CartPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 ml-1"
+                          className="h-11 w-11 text-destructive hover:text-destructive hover:bg-destructive/10 ml-1"
+                          aria-label={`Remove ${item.name} from bag`}
                           onClick={() => cart.removeItem(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -157,7 +159,7 @@ export default function CartPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-4">
+            <Card className="order-receipt sticky top-28">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Order Summary</CardTitle>
               </CardHeader>
@@ -186,7 +188,7 @@ export default function CartPage() {
 
                 <Link
                   to={cart.storeId ? `/stores/${cart.storeId}` : '/stores'}
-                  className="block text-center text-sm text-orange-600 hover:text-orange-700 hover:underline mt-2"
+                  className="block text-center text-sm text-primary hover:text-primary hover:underline mt-2"
                 >
                   Continue Shopping
                 </Link>

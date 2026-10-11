@@ -243,8 +243,8 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <Card className="overflow-hidden border-0 shadow-lg">
-        <div className={`bg-linear-to-r ${roleMeta.gradient} p-6 text-white`}>
+      <Card className="overflow-hidden border-0">
+        <div className="bg-foreground p-6 text-background">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function ProfilePage() {
                 {roleMeta.description}
               </p>
             </div>
-            <div className="rounded-xl bg-white/15 p-4 backdrop-blur-sm min-w-55">
+            <div className="rounded-xl bg-white/15 p-4  min-w-55">
               <p className="text-xs uppercase tracking-wide text-white/80">Member Since</p>
               <p className="font-semibold mt-1 text-sm">
                 {currentUser.createdAt ? formatDate(currentUser.createdAt) : 'N/A'}

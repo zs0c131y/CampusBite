@@ -73,7 +73,7 @@ export default function StoreMenuPage() {
             : []
         setMenuItems(menuList)
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to load store menu. Please try again.')
     } finally {
       setLoading(false)
@@ -142,7 +142,7 @@ export default function StoreMenuPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50/50">
+      <div className="min-h-screen bg-transparent">
         <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
           {/* Header Skeleton */}
           <div className="animate-pulse mb-8">
@@ -163,7 +163,7 @@ export default function StoreMenuPage() {
 
   if (!store) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Store not found</h2>
@@ -194,9 +194,10 @@ export default function StoreMenuPage() {
         </Button>
 
         {/* Store Header */}
-        <div className="mb-6 sm:mb-8 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-[0_16px_30px_-24px_rgba(32,23,15,0.7)] backdrop-blur-sm sm:p-5">
+        <div className="page-heading grid items-center gap-6 sm:grid-cols-[1fr_240px]">
+          <div><p className="eyebrow mb-3 text-primary">Outlet menu</p><h1>{store.name}</h1>{store.description && <p className="mt-3 max-w-lg text-sm text-muted-foreground">{store.description}</p>}</div>
           {storeImage ? (
-            <div className="h-40 sm:h-56 rounded-xl overflow-hidden mb-4">
+            <div className="h-36 rounded-2xl overflow-hidden">
               <img
                 src={storeImage}
                 alt={store.name}
@@ -204,27 +205,20 @@ export default function StoreMenuPage() {
               />
             </div>
           ) : (
-            <div className="h-40 sm:h-56 rounded-xl bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center mb-4">
-              <Store className="h-16 w-16 text-white/80" />
+            <div className="store-placeholder hidden h-36 rounded-2xl items-center justify-center sm:flex">
+              <Store className="h-12 w-12" />
             </div>
-          )}
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {store.name}
-          </h1>
-          {store.description && (
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {store.description}
-            </p>
           )}
         </div>
 
         {/* Search & Filters */}
-        <div className="mb-6 space-y-4 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-[0_12px_28px_-24px_rgba(32,23,15,0.65)] sm:p-5">
+        <div className="mb-6 space-y-4">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search menu items..."
+              aria-label="Search menu items"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -240,7 +234,7 @@ export default function StoreMenuPage() {
                   onClick={() => setActiveCategory(cat)}
                   className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
                     activeCategory === cat
-                      ? 'border-orange-600 bg-orange-600 text-white shadow-sm'
+                      ? 'border-foreground bg-foreground text-background'
                       : 'border-border bg-background text-muted-foreground hover:border-orange-300 hover:text-foreground'
                   }`}
                 >
@@ -270,7 +264,7 @@ export default function StoreMenuPage() {
 
         {/* Menu Items Grid */}
         {filteredItems.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {filteredItems.map((item) => {
               const itemId = item._id || item.id
               const quantity = getCartQuantity(itemId)
@@ -280,7 +274,7 @@ export default function StoreMenuPage() {
               return (
                 <Card
                   key={itemId}
-                  className={`overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_-24px_rgba(32,23,15,0.6)] ${
+                  className={`menu-food-card overflow-hidden ${
                     isUnavailable ? 'opacity-60' : ''
                   }`}
                 >
@@ -301,8 +295,8 @@ export default function StoreMenuPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="h-36 bg-linear-to-br from-amber-100 to-orange-100 flex items-center justify-center relative">
-                      <UtensilsCrossed className="h-10 w-10 text-orange-300" />
+                    <div className="store-placeholder h-36 flex items-center justify-center relative">
+                      <UtensilsCrossed className="h-10 w-10 text-muted-foreground" />
                       {isUnavailable && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                           <Badge variant="destructive" className="text-xs">
@@ -337,7 +331,8 @@ export default function StoreMenuPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-11 w-11"
+                            aria-label={`Remove one ${item.name}`}
                             onClick={() =>
                               handleUpdateQuantity(item, quantity - 1)
                             }
@@ -350,7 +345,8 @@ export default function StoreMenuPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-11 w-11"
+                            aria-label={`Add one ${item.name}`}
                             onClick={() =>
                               handleUpdateQuantity(item, quantity + 1)
                             }
@@ -375,11 +371,11 @@ export default function StoreMenuPage() {
 
       {/* Cart Summary Floating Bar */}
       {cartItemCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 bg-background/95 shadow-[0_-16px_24px_-20px_rgba(32,23,15,0.8)] backdrop-blur-sm">
+        <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 bg-foreground text-background md:bottom-0 [padding-bottom:env(safe-area-inset-bottom)]">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-orange-100 rounded-full p-2">
-                <ShoppingCart className="h-5 w-5 text-orange-600" />
+              <div className="bg-secondary rounded-full p-2">
+                <ShoppingCart className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold">
@@ -389,7 +385,7 @@ export default function StoreMenuPage() {
                 <p className="text-xs text-muted-foreground">{cart.storeName}</p>
               </div>
             </div>
-            <Button onClick={() => navigate('/cart')}>
+            <Button className="bg-accent text-foreground hover:bg-accent/90" onClick={() => navigate('/cart')}>
               View Cart
               <ArrowLeft className="h-4 w-4 ml-1 rotate-180" />
             </Button>

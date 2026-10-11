@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardHeader,
@@ -75,7 +76,6 @@ export default function LoginPage() {
     } catch (error) {
       const message =
         error.response?.data?.message ||
-        error.message ||
         "Login failed. Please try again.";
       toast.error(message);
     } finally {
@@ -94,7 +94,7 @@ export default function LoginPage() {
         <div className="w-full">
           {/* Logo / Branding */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-bold text-orange-700 tracking-tight">
+            <h1 className="font-display text-4xl font-bold text-primary tracking-tight">
               CampusBite
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -102,7 +102,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 bg-card/90 shadow-[0_20px_34px_-26px_rgba(32,23,15,0.65)] backdrop-blur-sm">
+          <Card className="border border-border/80 bg-card/90  ">
             <CardHeader className="text-center pb-2">
               <CardTitle className="font-display text-2xl">
                 Welcome back
@@ -142,7 +142,7 @@ export default function LoginPage() {
                     <Label htmlFor="password">Password</Label>
                     <Link
                       to="/forgot-password"
-                      className="text-xs text-orange-600 hover:text-orange-700 hover:underline"
+                      className="text-xs text-primary hover:text-primary hover:underline"
                     >
                       Forgot password?
                     </Link>
@@ -164,7 +164,6 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
                       }
@@ -184,17 +183,15 @@ export default function LoginPage() {
                 </div>
 
                 {/* Remember me */}
-                <div className="flex items-center space-x-2">
-                  <input
+                <div className="flex min-h-11 items-center gap-3">
+                  <Checkbox
                     id="remember"
-                    type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
                   <Label
                     htmlFor="remember"
-                    className="text-sm font-normal cursor-pointer"
+                    className="cursor-pointer py-2 text-sm font-medium text-muted-foreground"
                   >
                     Remember me
                   </Label>
@@ -227,7 +224,7 @@ export default function LoginPage() {
                 Don&apos;t have an account?{" "}
                 <Link
                   to="/register"
-                  className="text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                  className="text-primary hover:text-primary font-medium hover:underline"
                 >
                   Register
                 </Link>
