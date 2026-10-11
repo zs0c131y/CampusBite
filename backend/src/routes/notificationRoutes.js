@@ -29,7 +29,7 @@ router.get("/subscribe", async (req, res) => {
   }
 
   const userDoc = await User.findById(decoded.userId).lean();
-  if (!userDoc) {
+  if (!userDoc || userDoc.is_active === false || !userDoc.is_email_verified || (decoded.authVersion || 0) !== (userDoc.auth_version || 0)) {
     return res.status(401).json({ success: false, message: "User not found." });
   }
 

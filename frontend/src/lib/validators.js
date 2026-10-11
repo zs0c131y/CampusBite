@@ -26,6 +26,11 @@ export function validateEmail(email) {
   return { valid: true, error: null }
 }
 
+export function validateLoginEmail(email) {
+  if (email?.trim().toLowerCase() === 'adarsh@campusbite') return { valid: true, error: null }
+  return validateEmail(email?.trim())
+}
+
 export function validateChristUniversityEmail(email) {
   const baseValidation = validateEmail(email)
   if (!baseValidation.valid) return baseValidation

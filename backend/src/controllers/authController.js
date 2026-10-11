@@ -139,16 +139,19 @@ export const registerSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  email: z.string().trim().toLowerCase().refine(
+    (email) => email === "adarsh@campusbite" || z.email().safeParse(email).success,
+    "Invalid email format",
+  ),
   password: z.string().min(1, "Password is required"),
 });
 
-const generateTokens = (userId) => {
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
+const generateTokens = (userId, authVersion = 0) => {
+  const accessToken = jwt.sign({ userId, authVersion }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "1h",
   });
 
-  const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, {
+  const refreshToken = jwt.sign({ userId, authVersion }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   });
 
@@ -259,6 +262,10 @@ export const login = async (req, res, next) => {
       });
     }
 
+    if (user.is_active === false) {
+      return res.status(403).json({ success: false, message: "Your account is suspended. Contact an administrator." });
+    }
+
     if (!user.is_email_verified) {
       return res.status(403).json({
         success: false,
@@ -267,7 +274,7 @@ export const login = async (req, res, next) => {
     }
 
     const userId = user._id.toString();
-    const { accessToken, refreshToken } = generateTokens(userId);
+    const { accessToken, refreshToken } = generateTokens(userId, user.auth_version || 0);
 
     await RefreshToken.create({
       user_id: user._id,
@@ -403,6 +410,7 @@ export const resetPassword = async (req, res, next) => {
     user.password = await bcrypt.hash(password, 12);
     user.password_reset_token = null;
     user.password_reset_expires = null;
+    user.auth_version = (user.auth_version || 0) + 1;
     await user.save();
 
     await RefreshToken.deleteMany({ user_id: user._id });
@@ -451,10 +459,16 @@ export const refreshToken = async (req, res, next) => {
       });
     }
 
+    const user = await User.findById(decoded.userId).lean();
+    if (!user || user.is_active === false || !user.is_email_verified || (decoded.authVersion || 0) !== (user.auth_version || 0)) {
+      await RefreshToken.deleteMany({ user_id: decoded.userId });
+      return res.status(401).json({ success: false, message: "Account unavailable." });
+    }
+
     await RefreshToken.deleteOne({ _id: tokenDoc._id });
 
     const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-      generateTokens(decoded.userId);
+      generateTokens(decoded.userId, user.auth_version || 0);
 
     await RefreshToken.create({
       user_id: decoded.userId,

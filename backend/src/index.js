@@ -18,6 +18,7 @@ import storeRoutes from "./routes/storeRoutes.js";
 import menuRoutes from "./routes/menuRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import { uploadsDir, uploadsPublicPath } from "./config/uploads.js";
 
@@ -166,6 +167,7 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 // notification route is already mounted above the rate limiter
 
 if (isProduction) {

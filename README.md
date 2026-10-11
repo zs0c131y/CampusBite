@@ -14,6 +14,26 @@ A full-stack web application for ordering food from college campus canteens. Stu
 
 ## Features
 
+### Administrator dashboard
+- Open `/admin` after signing in as an administrator (admin login redirects there).
+- View campus account, store, order and successful payment totals.
+- Search and edit users, verify email, suspend/reactivate accounts, and clear ordering restrictions.
+- View store owners and pause/activate stores with a confirmation step.
+- Search orders, filter order/payment status, and inspect purchased items.
+- Change the admin name, email and password from **Account**. Credential changes revoke existing sessions.
+- Admin routes require the admin role on the server; public registration cannot create administrators.
+
+To seed the initial administrator, configure `MONGODB_URI` (and optionally `MONGODB_DB_NAME`) in `backend/.env`, then run:
+
+```bash
+cd backend
+npm run seed:admin
+```
+
+Initial login: `adarsh@campusbite` / `password1234`. The account is email verified and the password is stored as a bcrypt hash. The seed command preserves existing admin credentials and refuses to elevate an existing non-admin account. It runs explicitly, so changing your email or password does not recreate the default account on server startup. You can override the seed credentials with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Use the web dashboard for administration.
+
+Run the admin API and seed regression tests with `cd backend && npm test`. These tests exercise HTTP authorization and validation with mocked database calls; they do not require MongoDB.
+
 ### Students / Faculty
 - Browse all campus food outlets
 - Search and filter menu items by category

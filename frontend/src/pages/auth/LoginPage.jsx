@@ -15,7 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { isRememberMeEnabled } from "@/lib/authStorage";
-import { validateEmail } from "@/lib/validators";
+import { validateLoginEmail } from "@/lib/validators";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function LoginPage() {
@@ -43,7 +43,7 @@ export default function LoginPage() {
   const validate = () => {
     const newErrors = {};
 
-    const emailResult = validateEmail(formData.email);
+    const emailResult = validateLoginEmail(formData.email);
     if (!emailResult.valid) newErrors.email = emailResult.error;
 
     if (!formData.password) {
@@ -65,7 +65,9 @@ export default function LoginPage() {
       toast.success("Login successful!");
 
       const role = data?.data?.user?.role || data?.user?.role;
-      if (role === "store_employee") {
+      if (role === "admin") {
+        navigate("/admin/overview", { replace: true });
+      } else if (role === "store_employee") {
         navigate("/store/dashboard", { replace: true });
       } else {
         navigate("/stores", { replace: true });

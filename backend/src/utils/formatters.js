@@ -22,6 +22,7 @@ export const formatUser = (userDoc) => {
     employeeId: user.employee_id,
     phoneNumber: user.phone_number,
     isEmailVerified: user.is_email_verified,
+    isActive: user.is_active !== false,
     noShowCount: user.no_show_count,
     trustTier: user.trust_tier,
     orderingRestrictedUntil: user.ordering_restricted_until,

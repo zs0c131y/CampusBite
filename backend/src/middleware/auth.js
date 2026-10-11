@@ -18,7 +18,7 @@ export const authenticate = async (req, res, next) => {
 
     const user = await User.findById(decoded.userId).lean()
 
-    if (!user) {
+    if (!user || user.is_active === false || !user.is_email_verified || (decoded.authVersion || 0) !== (user.auth_version || 0)) {
       return res.status(401).json({
         success: false,
         message: 'Invalid token. User not found.',

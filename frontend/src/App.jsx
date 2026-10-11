@@ -12,6 +12,7 @@ import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
 import ProfilePage from '@/pages/ProfilePage'
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 
 // Student pages
 import StoresPage from '@/pages/student/StoresPage'
@@ -31,6 +32,7 @@ import OrderDetailPage from '@/pages/store/OrderDetailPage'
 function HomeRedirect() {
   const { user, isAuthenticated } = useAuth()
   if (!isAuthenticated) return <LandingPage />
+  if (user?.role === 'admin') return <Navigate to="/admin/overview" replace />
   if (user?.role === 'store_employee') return <Navigate to="/store/dashboard" replace />
   return <Navigate to="/stores" replace />
 }
@@ -51,7 +53,7 @@ function App() {
     location.pathname.startsWith('/reset-password/') ||
     location.pathname.startsWith('/verify-email/')
   const isPublicLanding = location.pathname === '/' && !isAuthenticated
-  const hideNavbar = isAuthRoute || isPublicLanding
+  const hideNavbar = isAuthRoute || isPublicLanding || location.pathname.startsWith('/admin')
   const fluid = hideNavbar
 
   return (
@@ -64,6 +66,11 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+        <Route path="/admin/*" element={
+          <ProtectedRoute roles={['admin']}>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        } />
 
         {/* Common authenticated route */}
         <Route path="/profile" element={
