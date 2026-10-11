@@ -8,6 +8,10 @@ primary_region = 'bom'
 
 [build]
 
+[deploy]
+  # Temporary: remove after the initial administrator has been seeded.
+  release_command = "node backend/scripts/seed-admin.js"
+
 [env]
   UPLOAD_DIR = "/data/uploads"
 
