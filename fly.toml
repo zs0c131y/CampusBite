@@ -1,19 +1,22 @@
-# fly.toml app configuration file generated for campus-bite on 2026-02-22T10:45:47Z
+# fly.toml app configuration file generated for campusbite on 2026-10-11T06:12:30Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'campus-bite'
-primary_region = 'bom'
+app = 'campusbite'
+primary_region = 'sin'
 
 [build]
 
 [deploy]
-  # Temporary: remove after the initial administrator has been seeded.
-  release_command = "node backend/scripts/seed-admin.js"
+  release_command = 'node backend/scripts/seed-admin.js'
 
 [env]
-  UPLOAD_DIR = "/data/uploads"
+  UPLOAD_DIR = '/data/uploads'
+
+[[mounts]]
+  source = 'db'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
@@ -27,7 +30,4 @@ primary_region = 'bom'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-
-[mounts]
-  source = "db"
-  destination = "/data"
+  memory_mb = 512
