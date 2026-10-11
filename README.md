@@ -18,6 +18,7 @@ A full-stack web application for ordering food from college campus canteens. Stu
 - Open `/admin` after signing in as an administrator (admin login redirects there).
 - View campus account, store, order and successful payment totals.
 - Search and edit users, verify email, suspend/reactivate accounts, and clear ordering restrictions.
+- Delete non-admin accounts after confirming their email. Deletion revokes access, pauses owned stores and preserves order history; active orders must be resolved first.
 - View store owners and pause/activate stores with a confirmation step.
 - Search orders, filter order/payment status, and inspect purchased items.
 - Change the admin name, email and password from **Account**. Credential changes revoke existing sessions.

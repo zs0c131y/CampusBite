@@ -5,6 +5,7 @@ import User from '../models/User.js'
 import Store from '../models/Store.js'
 import Order from '../models/Order.js'
 import RefreshToken from '../models/RefreshToken.js'
+import { disconnectUser } from '../services/notificationService.js'
 import { formatUser, formatStore } from '../utils/formatters.js'
 
 const publicUserFields = '-password -email_verification_token -password_reset_token -password_reset_expires -__v'
@@ -98,8 +99,41 @@ export const listStores = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+export const deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).lean()
+    if (!user) return fail(res, 404, 'User not found.')
+    if (user.role === 'admin' || req.user.id === req.params.id) {
+      return fail(res, 403, 'Administrator accounts cannot be deleted.')
+    }
+
+    const stores = await Store.find({ owner_id: user._id }).select('_id').lean()
+    const storeIds = stores.map((store) => store._id)
+    const activeOrder = await Order.exists({
+      order_status: { $in: ['placed', 'accepted', 'processing', 'ready'] },
+      $or: [{ user_id: user._id }, { store_id: { $in: storeIds } }],
+    })
+    if (activeOrder) return fail(res, 409, 'This account or its store has active orders. Complete or cancel them before deleting the account.')
+
+    // Keep stores, menus and order history, but stop abandoned stores taking orders.
+    // Delete the account last so a cleanup failure can be retried safely.
+    if (storeIds.length) await Store.updateMany({ _id: { $in: storeIds } }, { is_active: false })
+    await RefreshToken.deleteMany({ user_id: user._id })
+    const result = await User.deleteOne({ _id: user._id, role: { $ne: 'admin' } })
+    if (!result.deletedCount) return fail(res, 409, 'The account changed. Refresh the user list and try again.')
+    disconnectUser(user._id)
+    res.json({ success: true, message: 'Account deleted. Order history has been preserved.' })
+  } catch (error) { next(error) }
+}
+
 export const setStoreStatus = async (req, res, next) => {
   try {
+    if (req.body.isActive) {
+      const current = await Store.findById(req.params.id).lean()
+      if (!current) return fail(res, 404, 'Store not found.')
+      const owner = await User.exists({ _id: current.owner_id, role: 'store_employee', is_active: { $ne: false } })
+      if (!owner) return fail(res, 409, 'This store needs an active store owner before it can be activated.')
+    }
     const store = await Store.findByIdAndUpdate(req.params.id, { is_active: req.body.isActive }, { new: true, runValidators: true })
     if (!store) return fail(res, 404, 'Store not found.')
     res.json({ success: true, message: 'Store availability updated.', data: formatStore(store) })

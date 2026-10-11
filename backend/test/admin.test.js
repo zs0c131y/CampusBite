@@ -5,7 +5,9 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import User from '../src/models/User.js'
 import Store from '../src/models/Store.js'
+import Order from '../src/models/Order.js'
 import RefreshToken from '../src/models/RefreshToken.js'
+import { addClient, getConnectedClientCount } from '../src/services/notificationService.js'
 import adminRoutes from '../src/routes/adminRoutes.js'
 import { loginSchema, registerSchema, refreshToken } from '../src/controllers/authController.js'
 import { seedAdmin } from '../src/services/adminSeedService.js'
@@ -40,7 +42,7 @@ const request = (path, { method = 'GET', body, auth = token() } = {}) => fetch(`
 const userUpdate = { name: 'Student Updated', phoneNumber: '', role: 'student', isActive: true, isEmailVerified: true }
 
 test('every admin endpoint rejects unauthenticated requests', async () => {
-  for (const [path, method] of [['/overview', 'GET'], ['/users', 'GET'], [`/users/${userId}`, 'PATCH'], ['/stores', 'GET'], [`/stores/${userId}`, 'PATCH'], ['/orders', 'GET'], ['/account', 'PUT']]) {
+  for (const [path, method] of [['/overview', 'GET'], ['/users', 'GET'], [`/users/${userId}`, 'PATCH'], [`/users/${userId}`, 'DELETE'], ['/stores', 'GET'], [`/stores/${userId}`, 'PATCH'], ['/orders', 'GET'], ['/account', 'PUT']]) {
     assert.equal((await request(path, { method, auth: null })).status, 401)
   }
 })
@@ -49,6 +51,7 @@ test('non-admin roles cannot read or mutate admin resources', async () => {
   for (const role of ['student', 'faculty', 'store_employee']) {
     authenticateAs({ ...admin, role })
     assert.equal((await request('/users')).status, 403)
+    assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 403)
     assert.equal((await request(`/stores/${userId}`, { method: 'PATCH', body: { isActive: false } })).status, 403)
     mock.restoreAll()
   }
@@ -83,6 +86,7 @@ test('user search escapes regex input, bounds pagination, and excludes secrets',
 test('invalid IDs and arbitrary update fields are rejected', async () => {
   authenticateAs(admin)
   assert.equal((await request('/users/invalid', { method: 'PATCH', body: userUpdate })).status, 400)
+  assert.equal((await request('/users/invalid', { method: 'DELETE' })).status, 400)
   assert.equal((await request(`/users/${userId}`, { method: 'PATCH', body: { ...userUpdate, password: 'injected' } })).status, 400)
   assert.equal((await request(`/stores/${userId}`, { method: 'PATCH', body: { isActive: 'false' } })).status, 400)
 })
@@ -162,4 +166,69 @@ test('seed preserves changed credentials and refuses to elevate an existing ordi
   mock.restoreAll()
   mock.method(User, 'findOne', async () => ({ role: 'student' }))
   await assert.rejects(seedAdmin(), /non-admin/)
+})
+
+const setupDelete = ({ role = 'student', stores = [], activeOrder = null } = {}) => {
+  mock.method(User, 'findById', (id) => ({ lean: async () => id === adminId ? admin : { _id: userId, role } }))
+  mock.method(Store, 'find', () => ({ select: () => ({ lean: async () => stores }) }))
+  const active = mock.method(Order, 'exists', async () => activeOrder)
+  const pause = mock.method(Store, 'updateMany', async () => ({}))
+  const revoke = mock.method(RefreshToken, 'deleteMany', async () => ({}))
+  const remove = mock.method(User, 'deleteOne', async () => ({ deletedCount: 1 }))
+  return { active, pause, revoke, remove }
+}
+
+test('deleting an account revokes tokens and streams while keeping order history', async () => {
+  const { revoke, remove, pause } = setupDelete()
+  let ended = false
+  addClient(userId, { end: () => { ended = true } })
+  const response = await request(`/users/${userId}`, { method: 'DELETE' })
+  assert.equal(response.status, 200)
+  assert.deepEqual(revoke.mock.calls[0].arguments[0], { user_id: userId })
+  assert.deepEqual(remove.mock.calls[0].arguments[0], { _id: userId, role: { $ne: 'admin' } })
+  assert.equal(pause.mock.callCount(), 0)
+  assert.equal(ended, true)
+  assert.equal(getConnectedClientCount(), 0)
+})
+
+test('deleting a store employee pauses their stores and checks their orders', async () => {
+  const storeId = '507f1f77bcf86cd799439013'
+  const { active, pause } = setupDelete({ role: 'store_employee', stores: [{ _id: storeId }] })
+  assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 200)
+  assert.deepEqual(active.mock.calls[0].arguments[0].$or[1], { store_id: { $in: [storeId] } })
+  assert.deepEqual(pause.mock.calls[0].arguments, [{ _id: { $in: [storeId] } }, { is_active: false }])
+})
+
+test('active orders block deletion before any mutation', async () => {
+  const { pause, revoke, remove } = setupDelete({ activeOrder: { _id: userId } })
+  assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 409)
+  assert.equal(pause.mock.callCount(), 0)
+  assert.equal(revoke.mock.callCount(), 0)
+  assert.equal(remove.mock.callCount(), 0)
+})
+
+test('deletion refuses administrator accounts and missing users', async () => {
+  const { remove } = setupDelete({ role: 'admin' })
+  assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 403)
+  assert.equal((await request(`/users/${adminId}`, { method: 'DELETE' })).status, 403)
+  assert.equal(remove.mock.callCount(), 0)
+  mock.restoreAll()
+  mock.method(User, 'findById', (id) => ({ lean: async () => id === adminId ? admin : null }))
+  assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 404)
+})
+
+test('cleanup failures keep the account available for a retry', async () => {
+  const { remove } = setupDelete()
+  mock.method(RefreshToken, 'deleteMany', async () => { throw new Error('Cleanup failed') })
+  assert.equal((await request(`/users/${userId}`, { method: 'DELETE' })).status, 500)
+  assert.equal(remove.mock.callCount(), 0)
+})
+
+test('stores whose owner was deleted cannot be activated', async () => {
+  authenticateAs(admin)
+  mock.method(Store, 'findById', () => ({ lean: async () => ({ _id: userId, owner_id: userId }) }))
+  mock.method(User, 'exists', async () => null)
+  const update = mock.method(Store, 'findByIdAndUpdate', async () => ({}))
+  assert.equal((await request(`/stores/${userId}`, { method: 'PATCH', body: { isActive: true } })).status, 409)
+  assert.equal(update.mock.callCount(), 0)
 })

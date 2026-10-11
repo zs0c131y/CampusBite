@@ -292,6 +292,9 @@ function UsersPanel() {
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [removing, setRemoving] = useState(false);
   const [saving, setSaving] = useState(false);
   const { data, loading, error, reload } = useAdminData("users", {
     search,
@@ -322,6 +325,23 @@ function UsersPanel() {
       toast.error(errorMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+  const remove = async (event) => {
+    event.preventDefault();
+    if (!deleting || deleteConfirmation !== deleting.email || removing) return;
+    setRemoving(true);
+    try {
+      await api.delete(`/admin/users/${deleting.id}`);
+      toast.success("Account deleted");
+      setDeleting(null);
+      setDeleteConfirmation("");
+      if (data.users.length === 1 && page > 1) setPage(page - 1);
+      else reload();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setRemoving(false);
     }
   };
   return (
@@ -403,13 +423,26 @@ function UsersPanel() {
                     </td>
                     <td className="px-5 py-4">
                       {user.role !== "admin" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => edit(user)}
-                        >
-                          Manage
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => edit(user)}
+                          >
+                            Manage
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            aria-label={`Delete account for ${user.name}`}
+                            onClick={() => {
+                              setDeleting(user);
+                              setDeleteConfirmation("");
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">
                           Protected
@@ -519,6 +552,54 @@ function UsersPanel() {
               </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open && !removing) setDeleting(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete account for {deleting?.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the account and signs the user out. Order
+              history is kept. Any owned stores will be paused. Accounts with
+              active orders cannot be deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={remove} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">
+                Type {deleting?.email} to confirm
+              </Label>
+              <Input
+                id="delete-confirmation"
+                autoComplete="off"
+                value={deleteConfirmation}
+                disabled={removing}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={removing}
+                onClick={() => setDeleting(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={removing || deleteConfirmation !== deleting?.email}
+              >
+                {removing ? "Deleting…" : "Delete account"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>

@@ -31,6 +31,16 @@ export const removeClient = (userId, res) => {
   if (set.size === 0) clients.delete(uid);
 };
 
+/** Close notification streams when an account is deleted. */
+export const disconnectUser = (userId) => {
+  const uid = String(userId);
+  const connections = clients.get(uid);
+  clients.delete(uid);
+  for (const res of connections || []) {
+    try { res.end(); } catch { /* already disconnected */ }
+  }
+};
+
 /**
  * Push a notification payload to all active connections for a user.
  * Returns true if at least one connection received the event.
