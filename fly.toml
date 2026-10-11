@@ -8,9 +8,6 @@ primary_region = 'sin'
 
 [build]
 
-[deploy]
-  release_command = 'node backend/scripts/seed-admin.js'
-
 [env]
   UPLOAD_DIR = '/data/uploads'
 
