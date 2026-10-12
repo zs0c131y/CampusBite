@@ -1,49 +1,49 @@
-import nodemailer from 'nodemailer';
+const strip = (value) => String(value || '').trim().replace(/^["']|["']$/g, '');
 
-const hasSmtpConfig =
-  !!process.env.SMTP_HOST &&
-  !!process.env.SMTP_PORT &&
-  !!process.env.SMTP_USER &&
-  !!process.env.SMTP_PASS;
+const apiKey = strip(process.env.MAILGUN_API_KEY);
+const domain = strip(process.env.MAILGUN_DOMAIN);
+const baseUrl = (strip(process.env.MAILGUN_BASE_URL) || 'https://api.mailgun.net').replace(/\/+$/, '');
+const senderName = strip(process.env.MAILGUN_SENDER_NAME) || 'CampusBite';
+const fromAddress = strip(process.env.MAILGUN_FROM_EMAIL) || (domain ? `campusbite@${domain}` : '');
 
-const transporter = hasSmtpConfig
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-  : null;
+const hasMailgunConfig = !!apiKey && !!domain;
 
-if (!hasSmtpConfig) {
+if (!hasMailgunConfig) {
   console.warn(
-    '[Startup] SMTP transporter is disabled because SMTP environment variables are incomplete.'
+    '[Startup] Mailgun is disabled because MAILGUN_API_KEY or MAILGUN_DOMAIN is missing.'
   );
 }
 
 export const sendEmail = async (to, subject, html) => {
-  if (!transporter) {
+  if (!hasMailgunConfig) {
     return null;
   }
 
-  try {
-    const mailOptions = {
-      from: `"CampusBite" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
-      to,
-      subject,
-      html,
-    };
+  const body = new URLSearchParams({
+    from: `${senderName} <${fromAddress}>`,
+    to: Array.isArray(to) ? to.join(',') : to,
+    subject,
+    html,
+  });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent:', info.messageId);
-    return info;
+  try {
+    const response = await fetch(`${baseUrl}/v3/${domain}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
+      },
+      body,
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`Mailgun ${response.status}: ${result.message || response.statusText}`);
+    }
+
+    console.log('Email sent:', result.id);
+    return result;
   } catch (error) {
     console.error('Error sending email:', error);
     throw error;
   }
 };
-
-export default transporter;

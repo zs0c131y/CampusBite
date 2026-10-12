@@ -8,7 +8,7 @@ A full-stack web application for ordering food from college campus canteens. Stu
 - **Backend:** Node.js + Express.js (ESM)
 - **Database:** PostgreSQL
 - **Auth:** JWT with refresh tokens
-- **Email:** Nodemailer (Gmail SMTP)
+- **Email:** Mailgun (HTTP API)
 - **State:** React Context API
 - **HTTP:** Axios with interceptors
 
@@ -100,11 +100,10 @@ JWT_SECRET=generate-a-random-secret-string
 JWT_REFRESH_SECRET=generate-another-random-secret-string
 JWT_EXPIRES_IN=1h
 JWT_REFRESH_EXPIRES_IN=7d
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-gmail-app-password
-FROM_EMAIL=noreply@campusbite.com
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_DOMAIN=mx.adarsh.run
+MAILGUN_BASE_URL=https://api.mailgun.net
+MAILGUN_SENDER_NAME=CampusBite
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -245,9 +244,7 @@ CampusBite/
 - Check that the database exists
 
 **Email not sending:**
-- Enable 2-Step Verification on your Google account
-- Generate an App Password (not your regular password)
-- Check SMTP_USER and SMTP_PASS in `.env`
+- Check MAILGUN_API_KEY and MAILGUN_DOMAIN in `.env`
 
 **Frontend can't reach backend:**
 - Ensure backend is running on port 5000
@@ -272,10 +269,10 @@ CampusBite/
 | `JWT_REFRESH_SECRET` | Refresh token secret | - |
 | `JWT_EXPIRES_IN` | Access token expiry | `1h` |
 | `JWT_REFRESH_EXPIRES_IN` | Refresh token expiry | `7d` |
-| `SMTP_HOST` | SMTP server host | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP server port | `587` |
-| `SMTP_USER` | SMTP email address | - |
-| `SMTP_PASS` | SMTP password/app password | - |
-| `FROM_EMAIL` | Sender email address | - |
+| `MAILGUN_API_KEY` | Mailgun private API key | - |
+| `MAILGUN_DOMAIN` | Mailgun sending domain | `mx.adarsh.run` |
+| `MAILGUN_BASE_URL` | Mailgun API base (use `https://api.eu.mailgun.net` for EU) | `https://api.mailgun.net` |
+| `MAILGUN_SENDER_NAME` | Sender display name | `CampusBite` |
+| `MAILGUN_FROM_EMAIL` | Sender address (optional) | `campusbite@<MAILGUN_DOMAIN>` |
 | `FRONTEND_URL` | Frontend URL for email links | `http://localhost:5173` |
 | `UPLOAD_DIR` | Filesystem directory for uploaded images/QRs | `backend/public/uploads` (local), `/data/uploads` (Fly) |

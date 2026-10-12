@@ -23,11 +23,10 @@ fly secrets set \
   JWT_SECRET=... \
   JWT_REFRESH_SECRET=... \
   MONGODB_URI=... \
-  SMTP_HOST=... \
-  SMTP_PORT=... \
-  SMTP_USER=... \
-  SMTP_PASS=... \
-  FROM_EMAIL=... \
+  MAILGUN_API_KEY=... \
+  MAILGUN_DOMAIN=mx.adarsh.run \
+  MAILGUN_BASE_URL=https://api.mailgun.net \
+  MAILGUN_SENDER_NAME=CampusBite \
   CHECKOUT_TOKEN_SECRET=... \
   FRONTEND_URL=https://<your-app-name>.fly.dev \
   APP_URL=https://<your-app-name>.fly.dev

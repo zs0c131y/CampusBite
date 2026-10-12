@@ -5,13 +5,7 @@ const REQUIRED_ENV_VARS = [
   "FRONTEND_URL",
 ];
 
-const SMTP_ENV_VARS = [
-  "SMTP_HOST",
-  "SMTP_PORT",
-  "SMTP_USER",
-  "SMTP_PASS",
-  "FROM_EMAIL",
-];
+const MAILGUN_ENV_VARS = ["MAILGUN_API_KEY", "MAILGUN_DOMAIN"];
 
 const getMissingEnvVars = (keys) =>
   keys.filter(
@@ -47,10 +41,10 @@ export const runStartupPreflight = () => {
     );
   }
 
-  const missingSmtp = getMissingEnvVars(SMTP_ENV_VARS);
-  if (missingSmtp.length > 0) {
+  const missingMailgun = getMissingEnvVars(MAILGUN_ENV_VARS);
+  if (missingMailgun.length > 0) {
     console.warn(
-      `[Startup] SMTP is not fully configured. Missing: ${missingSmtp.join(
+      `[Startup] Mailgun is not fully configured. Missing: ${missingMailgun.join(
         ", ",
       )}. Email features will be skipped.`,
     );
