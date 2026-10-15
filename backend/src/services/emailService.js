@@ -8,7 +8,21 @@ const escapeHtml = (str) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const FRONTEND_URL = process.env.FRONTEND_URL;
+const isLocalUrl = (url) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
+
+// Public site URL used in email links. Skips localhost values when a real
+// deployment URL is available (e.g. a leftover FRONTEND_URL on Fly).
+const getFrontendUrl = () => {
+  const candidates = [
+    process.env.FRONTEND_URL,
+    process.env.APP_URL,
+    process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : null,
+  ]
+    .map((url) => (url || "").trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+
+  return candidates.find((url) => !isLocalUrl(url)) || candidates[0] || "";
+};
 
 const baseStyles = `
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -75,7 +89,7 @@ const wrapTemplate = (content) => `
 `;
 
 export const sendVerificationEmail = async (email, name, token) => {
-  const verificationLink = `${FRONTEND_URL}/verify-email/${token}`;
+  const verificationLink = `${getFrontendUrl()}/verify-email/${token}`;
 
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Welcome, ${escapeHtml(name)}!</h2>
@@ -99,7 +113,7 @@ export const sendVerificationEmail = async (email, name, token) => {
 };
 
 export const sendPasswordResetEmail = async (email, name, token) => {
-  const resetLink = `${FRONTEND_URL}/reset-password/${token}`;
+  const resetLink = `${getFrontendUrl()}/reset-password/${token}`;
 
   const content = `
     <h2 style="color: #333333; margin-top: 0;">Password Reset Request</h2>
